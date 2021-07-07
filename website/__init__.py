@@ -2,6 +2,7 @@ from flask import Flask
 
 def createApp():
     app = Flask(__name__)
+    app.config['SECRET_KEY'] = "dummy"
 
     from .views import view
     from .auth import auth
