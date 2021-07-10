@@ -24,7 +24,6 @@ def login():
             return "Login successful"
         else:
             return "Wrong password!"
-        return f"{records}"
     return render_template("login.html")
 
 @auth.route("logout")
