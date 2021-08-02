@@ -1,0 +1,345 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |
+  VPC Creation
+  Dev environment and Game Changer user
+Parameters:
+  env:
+    Type: String
+    Description: >
+      Enter your 
+      environment name
+    Default: dit
+    AllowedValues:
+      - dit
+      - sit
+    ConstraintDescription: Must specify dit or sit environment
+  gameChangerId:
+    Type: String
+    Description: Enter your Game changer ID
+    Default: GC123456
+    AllowedPattern: "^(GC)[0-9]{6}"
+    ConstraintDescription: Must specify ID in the correct format
+  user:
+    Type: String
+    Description: Enter your name
+    Default: Game Changer
+    AllowedPattern: "^[A-Z a-z]+"
+  natInstanceAMI:
+    Type: String
+    Description: Enter NAT AMI
+    Default: amzn-ami-vpc-nat-2018.03.0.20210721.0-x86_64-ebs
+    AllowedPattern: "^amzn-ami-vpc-nat-[-a-zA-Z0-9._]+"
+    ConstraintDescription: Choose correct NAT AMI
+  vpcCIDR:
+    Type: String
+    Description: Enter vpc CIDR block
+    Default: 10.0.0.0/16
+  publicSubnet1:
+    Type: String
+    Description: Enter first public subnet's CIDR block
+    Default: 10.0.1.0/24
+  publicSubnet2:
+    Type: String
+    Description: Enter second public subnet's CIDR block
+    Default: 10.0.2.0/24
+  privateSubnet1:
+    Type: String
+    Description: Enter first private subnet's CIDR block
+    Default: 10.0.3.0/24
+  privateSubnet2:
+    Type: String
+    Description: Enter second private subnet's CIDR block
+    Default: 10.0.4.0/24
+Conditions:
+  checkEnvAndUser: !And
+    - !Equals
+      - !Ref env
+      - dit
+    - !Equals
+      - !Ref user
+      - Game Changer
+Mappings:
+  zoneMap:
+    az1:
+      zone: ap-south-1a
+      dit: dev-1a
+      sit: sit-1a
+    az2:
+      zone: ap-south-1b
+      dit: dev-1b
+      sit: sit-1b
+Resources:
+  createVPC:
+    Type: AWS::EC2::VPC
+    Condition: checkEnvAndUser
+    Properties:
+      CidrBlock: !Ref vpcCIDR
+      EnableDnsHostnames: True
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-vpc-cft
+        - Key: User
+          Value: !Ref user
+  createIG:
+    Type: AWS::EC2::InternetGateway
+    Condition: checkEnvAndUser
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-IG-cft
+  attachIG:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Condition: checkEnvAndUser
+    DependsOn:
+      - createVPC
+      - createIG
+    Properties:
+      InternetGatewayId: !Ref createIG
+      VpcId: !Ref createVPC
+  publicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-public-route-cft
+  addPublicRotue:
+    Type: AWS::EC2::Route
+    Condition: checkEnvAndUser
+    DependsOn:
+      - publicRouteTable
+      - createIG
+    Properties:
+      RouteTableId: !Ref publicRouteTable
+      GatewayId: !Ref createIG
+      DestinationCidrBlock: 0.0.0.0/0
+  privateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-private-route-cft
+  addPrivateRoute:
+    Type: AWS::EC2::Route
+    Condition: checkEnvAndUser
+    DependsOn:
+      - privateRouteTable
+      - natInstance
+    Properties:
+      RouteTableId: !Ref privateRouteTable
+      InstanceId: !Ref natInstance
+      DestinationCidrBlock: 0.0.0.0/0
+  createPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      CidrBlock: !Ref publicSubnet1
+      AvailabilityZone: !FindInMap [zoneMap, az1, zone]
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-public-subnet1-cft
+        - Key: zoneEnvValue
+          Value: !FindInMap [zoneMap, az1, !Ref env]
+  publicSubnet1Route:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: checkEnvAndUser
+    DependsOn: 
+      - addPublicRotue
+      - createPublicSubnet1
+    Properties:
+      RouteTableId: !Ref publicRouteTable
+      SubnetId: !Ref createPublicSubnet1
+  createPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      CidrBlock: !Ref publicSubnet2
+      AvailabilityZone: !FindInMap [zoneMap, az2, zone]
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-public-subnet2-cft
+        - Key: zoneEnvValue
+          Value: !FindInMap [zoneMap, az2, !Ref env]
+  publicSubnet2Route:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: checkEnvAndUser
+    DependsOn: 
+      - addPublicRotue
+      - createPublicSubnet2
+    Properties:
+      RouteTableId: !Ref publicRouteTable
+      SubnetId: !Ref createPublicSubnet2
+  createPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      CidrBlock: !Ref privateSubnet1
+      AvailabilityZone: !FindInMap [zoneMap, az1, zone]
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-private-subnet1-cft
+        - Key: zoneEnvValue
+          Value: !FindInMap [zoneMap, az1, !Ref env]
+  privateSubnet1Route:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: checkEnvAndUser
+    DependsOn:
+      - addPrivateRoute
+      - createPrivateSubnet1
+    Properties:
+      RouteTableId: !Ref privateRouteTable
+      SubnetId: !Ref createPrivateSubnet1
+  createPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      CidrBlock: !Ref privateSubnet2
+      AvailabilityZone: !FindInMap [zoneMap, az2, zone]
+      Tags:
+        - Key: Name
+          Value: !Sub ${env}-private-subnet2-cft
+        - Key: zoneEnvValue
+          Value: !FindInMap [zoneMap, az2, !Ref env]
+  privateSubnet2Route:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: checkEnvAndUser
+    DependsOn:
+      - addPrivateRoute
+      - createPrivateSubnet2
+    Properties:
+      RouteTableId: !Ref privateRouteTable
+      SubnetId: !Ref createPrivateSubnet2
+  natSG:
+    Type: AWS::EC2::SecurityGroup
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      GroupDescription: NAT instance Security group
+      GroupName: !Sub NAT-SG-${env}-cft
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: !Ref vpcCIDR
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub NAT-SG-${env}-cft
+  loadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Condition: checkEnvAndUser
+    DependsOn: createVPC
+    Properties:
+      VpcId: !Ref createVPC
+      GroupDescription: Load balancer Security group
+      GroupName: !Sub LB-SG-${env}-cft
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: !Sub LB-SG-${env}-cft
+  appSG:
+    Type: AWS::EC2::SecurityGroup
+    Condition: checkEnvAndUser
+    DependsOn: 
+      - createVPC
+      - natSG
+      - loadBalancerSG
+    Properties:
+      VpcId: !Ref createVPC
+      GroupDescription: App Security Group
+      GroupName: !Sub APP-SG-${env}-cft
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref natSG
+        - IpProtocol: tcp
+          FromPort: 5500
+          ToPort: 5500
+          SourceSecurityGroupId: !Ref loadBalancerSG
+      Tags:
+        - Key: Name
+          Value: !Sub APP-SG-${env}-cft
+  efsSG:
+    Type: AWS::EC2::SecurityGroup
+    Condition: checkEnvAndUser
+    DependsOn:
+      - createVPC
+      - appSG
+    Properties:
+      VpcId: !Ref createVPC
+      GroupDescription: EFS Security group
+      GroupName: !Sub EFS-SG-${env}-cft
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref appSG
+          IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+      Tags:
+        - Key: Name
+          Value: !Sub EFS-SG-${env}-cft
+  createEFS:
+    Type: AWS::EFS::FileSystem
+    Condition: checkEnvAndUser
+    DependsOn:
+      - createVPC
+      - appSG
+    Properties:
+      BackupPolicy:
+        Status: ENABLED
+      Encrypted: True
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub EFS-${env}-cft
+      PerformanceMode: generalPurpose
+  mountTarget1:
+    Type: AWS::EFS::MountTarget
+    Condition: checkEnvAndUser
+    DependsOn:
+      - createEFS
+      - efsSG
+    Properties:
+      FileSystemId: !Ref createEFS
+      SecurityGroups: !Ref efsSG
+      SubnetId: !Ref createPrivateSubnet1
+  mountTarget2:
+    Type: AWS::EFS::MountTarget
+    Condition: checkEnvAndUser
+    DependsOn:
+      - createEFS
+      - efsSG
+    Properties:
+      FileSystemId: !Ref createEFS
+      SecurityGroups: !Ref efsSG
+      SubnetId: !Ref createPrivateSubnet2
