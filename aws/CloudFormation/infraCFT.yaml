@@ -24,12 +24,21 @@ Parameters:
     Description: Enter your name
     Default: Game Changer
     AllowedPattern: "^[A-Z a-z]+"
-  natInstanceAMI:
+  natAMI:
     Type: String
     Description: Enter NAT AMI
-    Default: amzn-ami-vpc-nat-2018.03.0.20210721.0-x86_64-ebs
-    AllowedPattern: "^amzn-ami-vpc-nat-[-a-zA-Z0-9._]+"
-    ConstraintDescription: Choose correct NAT AMI
+    Default: ami-00999044593c895de
+  instanceType:
+    Type: String
+    Description: Enter instance type
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+  keyName:
+    Type: String
+    Description: Enter key pair name
+    Default: cft
   vpcCIDR:
     Type: String
     Description: Enter vpc CIDR block
@@ -38,6 +47,10 @@ Parameters:
     Type: String
     Description: Enter first public subnet's CIDR block
     Default: 10.0.1.0/24
+  natInstancePrivateIP1:
+    Type: String
+    Description: Enter Private IP address for NAT instance
+    Default: 10.0.1.10
   publicSubnet2:
     Type: String
     Description: Enter second public subnet's CIDR block
@@ -331,7 +344,8 @@ Resources:
       - efsSG
     Properties:
       FileSystemId: !Ref createEFS
-      SecurityGroups: !Ref efsSG
+      SecurityGroups:
+        - !Ref efsSG
       SubnetId: !Ref createPrivateSubnet1
   mountTarget2:
     Type: AWS::EFS::MountTarget
@@ -341,5 +355,33 @@ Resources:
       - efsSG
     Properties:
       FileSystemId: !Ref createEFS
-      SecurityGroups: !Ref efsSG
+      SecurityGroups: 
+        - !Ref efsSG
       SubnetId: !Ref createPrivateSubnet2
+  natInstance:
+    Type: AWS::EC2::Instance
+    Condition: checkEnvAndUser
+    DependsOn:
+      - createVPC
+      - natSG
+    Properties:
+      AvailabilityZone: !FindInMap [zoneMap, az1, zone]
+      ImageId: !Ref natAMI
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyName
+      Monitoring: False
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: True
+          DeleteOnTermination: True
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref natSG
+          PrivateIpAddress: !Ref natInstancePrivateIP1
+          SubnetId: !Ref createPublicSubnet1
+      SourceDestCheck: False
+      Tenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub NAT-Instance-${env}-cft
+        - Key: ZoneValue
+          Value: !FindInMap [zoneMap, az1, !Ref env]
