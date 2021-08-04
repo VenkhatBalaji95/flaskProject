@@ -22,7 +22,7 @@ Parameters:
   user:
     Type: String
     Description: Enter your name
-    Default: Game Changer
+    Default: gameChanger
     AllowedPattern: "^[A-Z a-z]+"
   natAMI:
     Type: String
@@ -70,7 +70,7 @@ Conditions:
       - dit
     - !Equals
       - !Ref user
-      - Game Changer
+      - gameChanger
 Mappings:
   zoneMap:
     az1:
@@ -380,8 +380,22 @@ Resources:
           SubnetId: !Ref createPublicSubnet1
       SourceDestCheck: False
       Tenancy: default
+      UserData:
+        Fn::Base64: |
+            #!/bin/bash
+            yum update -y
       Tags:
         - Key: Name
           Value: !Sub NAT-Instance-${env}-cft
         - Key: ZoneValue
           Value: !FindInMap [zoneMap, az1, !Ref env]
+Outputs:
+  lbSG:
+    Description: Load balancer Security group
+    Value: !GetAtt loadBalancerSG.GroupId
+    Export: 
+      Name: !Join
+        - ':'
+        - - !Ref user
+          - !Ref env
+          - loadBalancer
