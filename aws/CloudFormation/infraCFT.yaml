@@ -36,7 +36,7 @@ Parameters:
       - t2.micro
       - t2.small
   keyName:
-    Type: String
+    Type: AWS::EC2::KeyPair::KeyName
     Description: Enter key pair name
     Default: cft
   vpcCIDR:
