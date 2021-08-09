@@ -1,7 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: |
-  VPC Creation
-  Dev environment and Game Changer user
+  This template will create 
+  VPC, Internet Gateway, Private & Public subnet's
+  Security Group
+  EFS
+  NAT instance
 Parameters:
   env:
     Type: String
@@ -63,6 +66,17 @@ Parameters:
     Type: String
     Description: Enter second private subnet's CIDR block
     Default: 10.0.4.0/24
+  efsThroughputMode:
+    Type: String
+    Description: Throughput mode - bursting or provisioned
+    Default: bursting
+    AllowedValues:
+      - bursting
+      - provisioned
+  provisionedThroughPutInMibps:
+    Type: String
+    Description: Enter Throughput in mibps if the EFS through put mode is Provisioned
+    Default: ''
 Conditions:
   checkEnvAndUser: !And
     - !Equals
@@ -71,6 +85,10 @@ Conditions:
     - !Equals
       - !Ref user
       - gameChanger
+  provisionedThroughPut: !Not
+    - !Equals
+      - !Ref efsThroughputMode
+      - ''
 Mappings:
   zoneMap:
     az1:
@@ -336,6 +354,11 @@ Resources:
         - Key: Name
           Value: !Sub EFS-${env}-cft
       PerformanceMode: generalPurpose
+      ThroughputMode: !Ref efsThroughputMode
+      ProvisionedThroughputInMibps: !If
+        - provisionedThroughPut
+        - !Ref provisionedThroughPutInMibps
+        - !Ref AWS::NoValue
   mountTarget1:
     Type: AWS::EFS::MountTarget
     Condition: checkEnvAndUser

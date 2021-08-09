@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: This template will create an Application Load balancer, Load balancer with zero targets
+Parameters:
+  appALBIn:
+    Type: Number
+    Description: The port on which listener listens on requests
+    Default: 80
+  ALBProtocol:
+    Type: String
+    Description: Application Load Balancer Protocol - HTTP or HTTPS
+    Default: HTTP
+    AllowedValues:
+      - HTTP
+      - HTTPS
+  httpsCert:
+    Type: String
+    Description: HTTPS certificates if the ALB Protocol is HTTPS
+    Default: ''
+  user:
+    Type: String
+    Description: Enter name
+    Default: gameChanger
+    AllowedPattern: "^[A-Z a-z]+"
+    ConstraintDescription: Must specify characters
+  env:
+    Type: String
+    Description: Enviorment name
+    Default: dit
+    AllowedValues:
+      - dit
+      - sit
+  envNum:
+    Type: Number
+    Description: Enviorment number
+    Default: 1
+  healthCheckPort:
+    Type: Number
+    Description: Health check port
+    Default: 80
+Conditions:
+  checkEnvAndUser: !And
+    - !Equals
+      - !Ref env
+      - dit
+    - !Equals
+      - !Ref user
+      - gameChanger
+  httpsProtocol: !Not
+    - !Equals
+      - !Ref httpsCert
+      - ''
+Resources:
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: checkEnvAndUser
+    Properties:
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: 480
+      Name: !Join
+        - '-'
+        - - !Ref user
+          - !Ref env
+          - ALB
+          - CFT
+          - !Ref envNum
+      Scheme: internet-facing
+      SecurityGroups:
+        - !ImportValue
+          'Fn::Sub': "${user}:${env}:loadBalancer"
+      Subnets:
+        - Fn::ImportValue:
+            !Sub ${user}:${env}:firstSubnet
+        - Fn::ImportValue:
+            !Sub ${user}:${env}:secondSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub ${user}-${env}-ALB-CFT-${envNum}
+      Type: application
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: checkEnvAndUser
+    DependsOn:
+      - ALB
+      - tartgetGroup
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref tartgetGroup
+      LoadBalancerArn: !Ref ALB
+      Port: !Ref appALBIn
+      Protocol: !Ref ALBProtocol
+      Certificates:
+        - CertificateArn: !If
+            - httpsProtocol
+            - !Ref httpsCert
+            - !Ref AWS::NoValue
+  ALBFixedResponseRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: checkEnvAndUser
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+        - Type: fixed-response
+          FixedResponseConfig:
+              ContentType: text/plain
+              MessageBody: Logout page is yet to create.
+              StatusCode: 200
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig: 
+            Values: 
+              - /logout
+      ListenerArn: !Ref ALBListener
+      Priority: 30
+  tartgetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: checkEnvAndUser
+    DependsOn: ALB
+    Properties:
+      HealthCheckEnabled: True
+      HealthCheckPort: !Ref healthCheckPort
+      HealthCheckProtocol: !Ref ALBProtocol
+      HealthyThresholdCount: 2
+      Name: !Join
+        - '-'
+        - - !Ref user
+          - !Ref env
+          - TG
+          - CFT
+          - !Ref envNum
+      Port: !Ref appALBIn
+      Protocol: !Ref ALBProtocol
+      Tags:
+        - Key: Name
+          Value: !Sub ${user}-${env}-TG-CFT-${envNum}
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 420
+      TargetType: instance
+      VpcId: !ImportValue
+                "Fn::Sub": "${user}:${env}:vpc"
