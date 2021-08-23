@@ -6,11 +6,12 @@ import json
 instanceType= "t4g.micro"
 region = "ap-south-1"
 ami = "ami-04bde106886a53080"
+vpcid = "vpc-0aa544df1652ac1bb"
 
 def lambda_handler(event, context):
     if event ['RequestType'] in  ["Create", "Update"]:
         print ("Inside create/update request type")
-        if checkInstanceTypeExists() and checkAmiExists():
+        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists():
             print ("Success")
             print ("Event is {0}".format(event))
             data = {
@@ -74,6 +75,23 @@ def checkAmiExists():
             flag = True
         else:
             print ("'{ami}' is an Invalid AMI... Please use Ubuntu amd64 AMI".format(ami=ami))
+    except Exception as err:
+        print (err)
+    return flag
+    
+def checkVpcExists():
+    global vpcid
+    print ("Validating {0} VPC ID...".format(vpcid))
+    flag = False
+    vpcid = vpcid.strip()
+    ec2 = boto3.client("ec2", region_name="ap-south-1")
+    try:
+        response = ec2.describe_vpcs(VpcIds = [vpcid])
+        if response['Vpcs'][0]["State"] == "available":
+            print ("'{vpcid} is a valid VPC!".format(vpcid=vpcid))
+            flag = True
+        else:
+            print ("'{vpcid} is an Invalid VPC... Please use correct VPC".format(vpcid=vpcid))
     except Exception as err:
         print (err)
     return flag
