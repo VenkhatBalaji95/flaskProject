@@ -7,11 +7,13 @@ instanceType= "t4g.micro"
 region = "ap-south-1"
 ami = "ami-04bde106886a53080"
 vpcid = "vpc-0aa544df1652ac1bb"
+subnetID = ["subnet-072d5b12602626bc6","subnet-0d7fbda544122efd7"]
+az = []
 
 def lambda_handler(event, context):
     if event ['RequestType'] in  ["Create", "Update"]:
         print ("Inside create/update request type")
-        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists():
+        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists() and checkSubnetExists():
             print ("Success")
             print ("Event is {0}".format(event))
             data = {
@@ -96,6 +98,50 @@ def checkVpcExists():
         print (err)
     return flag
     
+def checkSubnetExists():
+    print ("Subnet Validation..")
+    print ("Subnets are {0}...".format(str(subnetID)))
+    global az
+    flag = False
+    ec2 = boto3.client("ec2", region_name="ap-south-1")
+    try:
+        response = ec2.describe_subnets(SubnetIds = subnetID)
+        availabilityZone = ec2.describe_availability_zones()
+        [az.append(i['ZoneName']) for i in availabilityZone['AvailabilityZones']]
+        for i in response["Subnets"]:
+            print ("Validating Subnet ID {0}...".format(i["SubnetId"]))
+            if i["State"] != "available":
+                print ("{0} is not available. Please check your subnet ID".format(i["SubnetId"]))
+                flag = False
+                break
+            if i["AvailabilityZone"] in az:
+                az.remove(i["AvailabilityZone"])
+            else:
+                print ("{0} should be in {1} AZ's. Please check your subnet ID".format(i["SubnetId"],str(az)))
+                flag = False
+                break
+            if i["AvailableIpAddressCount"] <= 30:
+                print ("Available IP address on {0} is less than 30. Please use Subnet which has high IP address. Available IP address count is {1}.".format(i["SubnetId"],i["AvailableIpAddressCount"]))
+                flag = False
+                break
+            routeTable = ec2.describe_route_tables(Filters=[{'Name': "association.subnet-id", 'Values': [i["SubnetId"]]}])
+            for routes in routeTable["RouteTables"]:
+                for state in routes["Routes"]:
+                    if "NetworkInterfaceId" not in state and "GatewayId" in state and state["GatewayId"].__contains__("igw-"):
+                        print ("Route table '{0}' has Internet gateway as the destination for '{1}'. Please use NAT instance as the destination route!".format(routes["RouteTableId"],i["SubnetId"]))
+                        flag = False
+                        break
+                    if state["State"] != "active":
+                        print ("Route table state is not active. It is '{0}' for '{1}'".format(state["State"],routes["RouteTableId"]))
+                        flag = False
+                        break
+            if not flag:
+                break
+            flag = True
+        return flag
+    except Exception as err:
+        print (err)
+
 def sendResponse(event, context, status, data=None):
     print ("Sending Response...")
     responseURL = event["ResponseURL"] if "ResponseURL" in event else None
