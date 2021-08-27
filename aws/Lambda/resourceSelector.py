@@ -20,14 +20,16 @@ def lambda_handler(event, context):
                 "Name": "Venkhat-Lambda"
             }
             sendResponse (event, context, "SUCCESS", data)
-            
+            return True
         else:
             print ("Failed")
             print ("Event is {0}".format(event))
             sendResponse (event, context, "FAILED")
+            return False
     elif event ['RequestType'] == "Delete":
         print ("Delete request type")
         sendResponse (event, context, "SUCCESS")
+        return True
             
 def getInstanceTypes():
     print ("Getting all the EC2 Instance types...")
@@ -99,7 +101,7 @@ def checkVpcExists():
     return flag
     
 def checkSubnetExists():
-    print ("Subnet Validation..")
+    print ("Subnet Validation!")
     print ("Subnets are {0}...".format(str(subnetID)))
     global az
     flag = False
@@ -110,6 +112,10 @@ def checkSubnetExists():
         [az.append(i['ZoneName']) for i in availabilityZone['AvailabilityZones']]
         for i in response["Subnets"]:
             print ("Validating Subnet ID {0}...".format(i["SubnetId"]))
+            if i['VpcId'] != vpcid:
+                print ("{0} is not in the vpc '{1}'".format(i["SubnetId"],vpcid))
+                flag = False
+                break
             if i["State"] != "available":
                 print ("{0} is not available. Please check your subnet ID".format(i["SubnetId"]))
                 flag = False
