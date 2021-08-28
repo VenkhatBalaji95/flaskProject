@@ -36,7 +36,7 @@ Parameters:
   healthCheckPort:
     Type: Number
     Description: Health check port
-    Default: 80
+    Default: 5500
 Conditions:
   checkEnvAndUser: !And
     - !Equals
@@ -105,15 +105,33 @@ Resources:
         - Type: fixed-response
           FixedResponseConfig:
               ContentType: text/plain
-              MessageBody: Logout page is yet to create.
+              MessageBody: This is fixed response. Logout page is yet to create.
               StatusCode: 200
       Conditions:
         - Field: path-pattern
           PathPatternConfig: 
             Values: 
-              - /logout
+              - /Logout
       ListenerArn: !Ref ALBListener
       Priority: 30
+  ALBRedirecteRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: checkEnvAndUser
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+        - Type: redirect
+          RedirectConfig:
+              Protocol: HTTP
+              Path: /
+              StatusCode: HTTP_301
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig: 
+            Values: 
+              - /home
+      ListenerArn: !Ref ALBListener
+      Priority: 35
   tartgetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Condition: checkEnvAndUser
@@ -130,7 +148,7 @@ Resources:
           - TG
           - CFT
           - !Ref envNum
-      Port: !Ref appALBIn
+      Port: !Ref healthCheckPort
       Protocol: !Ref ALBProtocol
       Tags:
         - Key: Name
