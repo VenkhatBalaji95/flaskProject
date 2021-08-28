@@ -8,12 +8,13 @@ region = "ap-south-1"
 ami = "ami-04bde106886a53080"
 vpcid = "vpc-0aa544df1652ac1bb"
 subnetID = ["subnet-072d5b12602626bc6","subnet-0d7fbda544122efd7"]
+sgID = ["sg-068efd4e0069d26c7"]
 az = []
 
 def lambda_handler(event, context):
     if event ['RequestType'] in  ["Create", "Update"]:
         print ("Inside create/update request type")
-        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists() and checkSubnetExists():
+        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists() and securityGroupExists() and checkSubnetExists():
             print ("Success")
             print ("Event is {0}".format(event))
             data = {
@@ -88,7 +89,7 @@ def checkVpcExists():
     print ("Validating {0} VPC ID...".format(vpcid))
     flag = False
     vpcid = vpcid.strip()
-    ec2 = boto3.client("ec2", region_name="ap-south-1")
+    ec2 = boto3.client("ec2", region_name=region)
     try:
         response = ec2.describe_vpcs(VpcIds = [vpcid])
         if response['Vpcs'][0]["State"] == "available":
@@ -101,11 +102,11 @@ def checkVpcExists():
     return flag
     
 def checkSubnetExists():
-    print ("Subnet Validation!")
+    print ("Subnet Validation...")
     print ("Subnets are {0}...".format(str(subnetID)))
     global az
-    flag = False
-    ec2 = boto3.client("ec2", region_name="ap-south-1")
+    flag = True
+    ec2 = boto3.client("ec2", region_name=region)
     try:
         response = ec2.describe_subnets(SubnetIds = subnetID)
         availabilityZone = ec2.describe_availability_zones()
@@ -143,10 +144,29 @@ def checkSubnetExists():
                         break
             if not flag:
                 break
-            flag = True
-        return flag
+            print ("{0} is a valid subnet!".format(i["SubnetId"]))
     except Exception as err:
         print (err)
+        flag = False
+    return flag
+
+def securityGroupExists():
+    print ("Security Group Validation...")
+    print ("Security Groups are {0}...".format(str(sgID)))
+    flag = True
+    ec2 = boto3.client("ec2", region_name=region)
+    try:
+        response = ec2.describe_security_groups(GroupIds = sgID)
+        for sg in response['SecurityGroups']:
+            if sg['VpcId'] != vpcid:
+                print ("Security Group '{0}' is not present in VPC '{1}'".format(sg["GroupName"],vpcid))
+                flag = False
+                break
+            print ("{0} is a valid Security Group!".format(sg["GroupName"]))
+    except Exception as err:
+        print (err)
+        flag = False
+    return flag
 
 def sendResponse(event, context, status, data=None):
     print ("Sending Response...")
