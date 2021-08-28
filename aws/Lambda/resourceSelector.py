@@ -10,11 +10,12 @@ vpcid = "vpc-0aa544df1652ac1bb"
 subnetID = ["subnet-072d5b12602626bc6","subnet-0d7fbda544122efd7"]
 sgID = ["sg-068efd4e0069d26c7"]
 az = []
+alb = ["arn:aws:elasticloadbalancing:ap-south-1:059913497205:loadbalancer/app/gameChanger-dit-ALB-CFT-1/9a1bf8d162471b68"]
 
 def lambda_handler(event, context):
     if event ['RequestType'] in  ["Create", "Update"]:
         print ("Inside create/update request type")
-        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists() and securityGroupExists() and checkSubnetExists():
+        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists() and securityGroupExists() and loadBalancerExists() and checkSubnetExists():
             print ("Success")
             print ("Event is {0}".format(event))
             data = {
@@ -163,6 +164,32 @@ def securityGroupExists():
                 flag = False
                 break
             print ("{0} is a valid Security Group!".format(sg["GroupName"]))
+    except Exception as err:
+        print (err)
+        flag = False
+    return flag
+
+def loadBalancerExists():
+    print ("Application Load balancer Validation...")
+    print ("ALB's are {0}...".format(str(alb)))
+    flag = True
+    client = boto3.client("elbv2", region_name=region)
+    try:
+        response = client.describe_load_balancers(LoadBalancerArns=alb)
+        for i in response['LoadBalancers']:
+            if i['State']['Code'] != "active":
+                print ("'{0}' Load Balancer is not in active state. State is '{1}'. Please use the active Load balancer.".format(i['LoadBalancerName'],i['State']['Code']))
+                flag = False
+                break
+            if i['Type'] != "application":
+                print ("'{0}' Load Balancer type is '{1}'. Please use Application Load balancer.".format(i['LoadBalancerName'],i['Type']))
+                flag = False
+                break
+            if i['VpcId'] != vpcid:
+                print ("VPC ID of '{0}' Load Balancer is '{1}'. Please use correct load balancer".format(i["LoadBalancerName"],i["VpcId"]))
+                flag = False
+                break
+            print ("'{1}' is a valid Application Load Balancer! Load Balancer ARN is '{0}'".format(i["LoadBalancerArn"],i['LoadBalancerName']))
     except Exception as err:
         print (err)
         flag = False
