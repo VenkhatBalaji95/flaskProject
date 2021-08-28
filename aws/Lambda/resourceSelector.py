@@ -3,19 +3,25 @@ import re
 import requests
 import json
 
-instanceType= "t4g.micro"
-region = "ap-south-1"
-ami = "ami-04bde106886a53080"
-vpcid = "vpc-0aa544df1652ac1bb"
-subnetID = ["subnet-072d5b12602626bc6","subnet-0d7fbda544122efd7"]
-sgID = ["sg-068efd4e0069d26c7"]
 az = []
-alb = ["arn:aws:elasticloadbalancing:ap-south-1:059913497205:loadbalancer/app/gameChanger-dit-ALB-CFT-1/9a1bf8d162471b68"]
 
 def lambda_handler(event, context):
-    if event ['RequestType'] in  ["Create", "Update"]:
+    if event['RequestType'] in  ["Create", "Update"]:
         print ("Inside create/update request type")
-        if checkInstanceTypeExists() and checkAmiExists() and checkVpcExists() and securityGroupExists() and loadBalancerExists() and checkSubnetExists():
+        if "SelectOn" in event["ResourceProperties"]:
+            print ("Assigning the values to the variables...")
+            global instanceType, region, ami, vpcid, subnetID, sgID, alb, keyName
+            instanceType = event["ResourceProperties"]["SelectOn"]["instanceType"] if "instanceType" in event["ResourceProperties"]["SelectOn"] else "t4g.micro"
+            region = event["ResourceProperties"]["SelectOn"]["region"] if "region" in event["ResourceProperties"]["SelectOn"] else "ap-south-1"
+            region = region.strip()
+            ami = event["ResourceProperties"]["SelectOn"]["ami"] if "ami" in event["ResourceProperties"]["SelectOn"] else "ami-0c1a7f89451184c8b"
+            vpcid = event["ResourceProperties"]["SelectOn"]["vpcid"] if "vpcid"in event["ResourceProperties"]["SelectOn"] else "vpc-0aa544df1652ac1bb"
+            subnetID = event["ResourceProperties"]["SelectOn"]["subnetID"] if "subnetID" in event["ResourceProperties"]["SelectOn"] else ["subnet-072d5b12602626bc6","subnet-0d7fbda544122efd7"]
+            sgID = event["ResourceProperties"]["SelectOn"]["sgID"] if "sgID" in event["ResourceProperties"]["SelectOn"] else ["sg-068efd4e0069d26c7"]
+            alb = event["ResourceProperties"]["SelectOn"]["alb"] if "alb" in event["ResourceProperties"]["SelectOn"] else "arn:aws:elasticloadbalancing:ap-south-1:059913497205:loadbalancer/app/gameChanger-dit-ALB-CFT-1/9a1bf8d162471b68"
+            keyName = event["ResourceProperties"]["SelectOn"]["keyName"] if "keyName" in event["ResourceProperties"]["SelectOn"] else "cft"
+            print ("Variable assignment completed successfully!")
+        if  checkInstanceTypeExists() and checkAmiExists() and checkVpcExists() and securityGroupExists() and loadBalancerExists() and keyPairExists() and checkSubnetExists():
             print ("Success")
             print ("Event is {0}".format(event))
             data = {
@@ -56,9 +62,8 @@ def getInstanceTypes():
     return instanceType
 
 def checkInstanceTypeExists():
-    global instanceType
-    instanceType = instanceType.strip()
-    print (f"Validating {instanceType} type...")
+    instanceType.strip()
+    print (f"Validating '{instanceType}' type...")
     flag = False
     for i in getInstanceTypes():
         if i == instanceType:
@@ -67,9 +72,8 @@ def checkInstanceTypeExists():
     return flag
     
 def checkAmiExists():
-    global ami
-    ami = ami.strip()
-    print ("Validating {0} AMI...".format(ami))
+    ami.strip()
+    print ("Validating '{0}' AMI...".format(ami))
     flag = False
     ec2 = boto3.client("ec2", region_name=region)
     try:
@@ -86,15 +90,14 @@ def checkAmiExists():
     return flag
     
 def checkVpcExists():
-    global vpcid
-    print ("Validating {0} VPC ID...".format(vpcid))
+    vpcid.strip()
+    print ("Validating '{0}' VPC ID...".format(vpcid))
     flag = False
-    vpcid = vpcid.strip()
     ec2 = boto3.client("ec2", region_name=region)
     try:
         response = ec2.describe_vpcs(VpcIds = [vpcid])
         if response['Vpcs'][0]["State"] == "available":
-            print ("'{vpcid} is a valid VPC!".format(vpcid=vpcid))
+            print ("'{vpcid}' is a valid VPC!".format(vpcid=vpcid))
             flag = True
         else:
             print ("'{vpcid} is an Invalid VPC... Please use correct VPC".format(vpcid=vpcid))
@@ -103,8 +106,7 @@ def checkVpcExists():
     return flag
     
 def checkSubnetExists():
-    print ("Subnet Validation...")
-    print ("Subnets are {0}...".format(str(subnetID)))
+    print ("Validating Subnets - {0}...".format(str(subnetID)))
     global az
     flag = True
     ec2 = boto3.client("ec2", region_name=region)
@@ -113,7 +115,7 @@ def checkSubnetExists():
         availabilityZone = ec2.describe_availability_zones()
         [az.append(i['ZoneName']) for i in availabilityZone['AvailabilityZones']]
         for i in response["Subnets"]:
-            print ("Validating Subnet ID {0}...".format(i["SubnetId"]))
+            print ("Subnet '{0}' validation...".format(i["SubnetId"]))
             if i['VpcId'] != vpcid:
                 print ("{0} is not in the vpc '{1}'".format(i["SubnetId"],vpcid))
                 flag = False
@@ -145,15 +147,14 @@ def checkSubnetExists():
                         break
             if not flag:
                 break
-            print ("{0} is a valid subnet!".format(i["SubnetId"]))
+            print ("'{0}' is a valid subnet!".format(i["SubnetId"]))
     except Exception as err:
         print (err)
         flag = False
     return flag
 
 def securityGroupExists():
-    print ("Security Group Validation...")
-    print ("Security Groups are {0}...".format(str(sgID)))
+    print ("Validating Security Group - {0}...".format(str(sgID)))
     flag = True
     ec2 = boto3.client("ec2", region_name=region)
     try:
@@ -163,19 +164,19 @@ def securityGroupExists():
                 print ("Security Group '{0}' is not present in VPC '{1}'".format(sg["GroupName"],vpcid))
                 flag = False
                 break
-            print ("{0} is a valid Security Group!".format(sg["GroupName"]))
+            print ("'{0}' is a valid Security Group!".format(sg["GroupName"]))
     except Exception as err:
         print (err)
         flag = False
     return flag
 
 def loadBalancerExists():
-    print ("Application Load balancer Validation...")
-    print ("ALB's are {0}...".format(str(alb)))
+    alb.strip()
+    print ("Validating ALB - '{0}'...".format(alb))
     flag = True
     client = boto3.client("elbv2", region_name=region)
     try:
-        response = client.describe_load_balancers(LoadBalancerArns=alb)
+        response = client.describe_load_balancers(LoadBalancerArns=[alb])
         for i in response['LoadBalancers']:
             if i['State']['Code'] != "active":
                 print ("'{0}' Load Balancer is not in active state. State is '{1}'. Please use the active Load balancer.".format(i['LoadBalancerName'],i['State']['Code']))
@@ -193,6 +194,19 @@ def loadBalancerExists():
     except Exception as err:
         print (err)
         flag = False
+    return flag
+
+def keyPairExists():
+    keyName.strip()
+    print ("Validating EC2 Key pair '{0}'...".format(keyName))
+    flag = False
+    ec2 = boto3.client("ec2", region_name=region)
+    try:
+        response = ec2.describe_key_pairs(KeyNames=[keyName])
+        print ("'{0}' is a valid EC2 Key Pair!".format(keyName))
+        flag = True
+    except Exception as err:
+        print (err)
     return flag
 
 def sendResponse(event, context, status, data=None):
