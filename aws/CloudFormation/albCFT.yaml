@@ -159,3 +159,24 @@ Resources:
       TargetType: instance
       VpcId: !ImportValue
                 "Fn::Sub": "${user}:${env}:vpc"
+Outputs:
+  listernerARN:
+    Description: Listener ARN
+    Value: !Ref ALBListener
+    Export:
+      Name: listenerARN
+  loadBalancerDNS:
+    Description: Application Load Balancer DNS name
+    Value: !GetAtt ALB.DNSName
+    Export:
+      Name: loadBalancerDNS
+  loadBalancerARN:
+    Description: Application Load Balancer ARN
+    Value: !Ref ALB
+    Export:
+      Name: loadBalancerARN
+  targetGroupArn:
+    Description: Target Group ARN
+    Value: !Ref tartgetGroup
+    Export:
+      Name: targetGroupARN
