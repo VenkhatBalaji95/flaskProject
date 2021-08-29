@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: EC2 template deploys a LaunchConfiguration, AutoScaling Group and CloudWatch Alarms
+Parameters:
+  EC2InstanceType:
+    Description: EC2 Instance Type
+    Type: String
+    Default: t2.micro
+    AllowedPattern: '^[a-z][0-9]\.([a-zA-Z0-9]+)'
+  amiID:
+    Description: Application AMI ID
+    Type: AWS::EC2::Image::Id
+    Default: ami-04bde106886a53080
+  vpcID:
+    Description: VPC ID
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-0aa544df1652ac1bb
+  subnetID:
+    Description: Private Subnet ID
+    Type: List<AWS::EC2::Subnet::Id>
+    Default: subnet-072d5b12602626bc6,subnet-0d7fbda544122efd7
+  sgID:
+    Description: Application Security Group ID
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Default: sg-068efd4e0069d26c7
+  env:
+    Description: Environment
+    Type: String
+    Default: dit
+    AllowedValues:
+      - dit
+      - sit
+  user:
+    Description: User name
+    Type: String
+    Default: gameChanger
+  keyName:
+    Description: EC2 Key Pair
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: cft
+  iamProfile:
+    Description: Name or ARN of the IAM instance profile to assign Application
+    Type: String
+    Default: ""
+  appDesiredCapacity:
+    Type: Number
+    Description: Initial instance capacity of the Auto Scaling Group
+    Default: 2
+  appMaxCapacity:
+    Type: Number
+    Description: Maximum instance capacity of the Auto Scaling Group
+    Default: 4
+  appMinCapacity:
+    Type: Number
+    Description: Minimum instance capacity of the Auto Scaling Group
+    Default: 1
+Conditions:
+  checkEnvAndUser: !And
+    - !Equals
+      - !Ref env
+      - dit
+    - !Equals
+      - !Ref user
+      - gameChanger
+  IAMProfile: !Not
+    - !Equals
+      - !Ref iamProfile
+      - ""
+Resources:
+  customResource:
+    Type: "Custom::AMISelect"
+    Condition: checkEnvAndUser
+    Version: "1.0"
+    Properties:
+      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:ami
+      SelectOn:
+        instanceType: !Ref EC2InstanceType
+        region: !Sub ${AWS::Region}
+        ami: !Ref amiID
+        vpcid: !Ref vpcID
+        subnetID: !Ref subnetID
+        sgID: !Ref sgID
+        alb: !ImportValue loadBalancerARN
+        keyName: !Ref keyName
+  launchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Condition: checkEnvAndUser
+    DependsOn: customResource
+    Properties:
+      IamInstanceProfile: !If
+        - IAMProfile
+        - !Ref iamProfile
+        - !Ref "AWS::NoValue"
+      ImageId: !Ref amiID
+      InstanceMonitoring: false
+      InstanceType: !Ref EC2InstanceType
+      KeyName: !Ref keyName
+      LaunchConfigurationName: !Sub ${user}-${env}-LC-CFT
+      SecurityGroups: !Ref sgID
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          sudo apt update -y;
+          sudo apt install python3-flask -y;
+          sudo apt install python3-pip -y;
+          sudo apt-get install mysql-server -y;
+          sudo apt-get install libmysqlclient-dev -y;
+          pip3 install flask-mysqldb
+  appASG:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Condition: checkEnvAndUser
+    DependsOn: launchConfig
+    Properties:
+      AutoScalingGroupName: !Sub ${user}-${env}-ASG-CFT
+      Cooldown: 60
+      DesiredCapacity: !Ref appDesiredCapacity
+      HealthCheckGracePeriod: 600
+      HealthCheckType: ELB
+      LaunchConfigurationName: !Ref launchConfig
+      MaxSize: !Ref appMaxCapacity
+      MinSize: !Ref appMinCapacity
+      NewInstancesProtectedFromScaleIn: True
+      TargetGroupARNs:
+        - !ImportValue targetGroupARN
+      TerminationPolicies:
+        - OldestInstance
+      VPCZoneIdentifier: !Ref subnetID
+      Tags:
+        - Key: Name
+          Value: !Sub ${user}-${env}-ASG-CFT
+          PropagateAtLaunch: True
