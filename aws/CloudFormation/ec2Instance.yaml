@@ -128,3 +128,67 @@ Resources:
         - Key: Name
           Value: !Sub ${user}-${env}-ASG-CFT
           PropagateAtLaunch: True
+  scaleInPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    DependsOn: appASG
+    Condition: checkEnvAndUser
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref appASG
+      Cooldown: 3600
+      PolicyType: SimpleScaling
+      ScalingAdjustment: -1
+  scaleOutPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    DependsOn: appASG
+    Condition: checkEnvAndUser
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref appASG
+      Cooldown: 3600
+      PolicyType: SimpleScaling
+      ScalingAdjustment: +1
+  cpuAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn:
+      - scaleOutPolicy
+      - appASG
+    Condition: checkEnvAndUser
+    Properties:
+      ActionsEnabled: True
+      AlarmActions:
+        - !Ref scaleOutPolicy
+      AlarmDescription: Create an EC2 instance if the CPU utilization is greater than 60
+      AlarmName: !Sub ${env}-Alarm-CPU-GreaterThan-60-CFT
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: AutoScalingCFT
+          Value: !Ref appASG
+      EvaluationPeriods: 2
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 60
+      Statistic: Average
+      Threshold: 60
+  cpuAlarmLow:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn:
+      - scaleInPolicy
+      - appASG
+    Condition: checkEnvAndUser
+    Properties:
+      ActionsEnabled: True
+      AlarmActions:
+        - !Ref scaleInPolicy
+      AlarmDescription: Create an EC2 instance if the CPU utilization is Less than 30
+      AlarmName: !Sub ${env}-Alarm-CPU-LessThan-30-CFT
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: AutoScalingCFT
+          Value: !Ref appASG
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 60
+      Statistic: Average
+      Threshold: 30
