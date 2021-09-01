@@ -40,7 +40,7 @@ Parameters:
   iamProfile:
     Description: Name or ARN of the IAM instance profile to assign Application
     Type: String
-    Default: ""
+    Default: "arn:aws:iam::059913497205:role/EC2hasS3fullAccess"
   appDesiredCapacity:
     Type: Number
     Description: Initial instance capacity of the Auto Scaling Group
@@ -99,12 +99,19 @@ Resources:
       UserData:
         Fn::Base64: |
           #!/bin/bash
-          sudo apt update -y;
-          sudo apt install python3-flask -y;
-          sudo apt install python3-pip -y;
-          sudo apt-get install mysql-server -y;
-          sudo apt-get install libmysqlclient-dev -y;
-          pip3 install flask-mysqldb
+          apt update -y ;
+          apt install python3-flask -y ;
+          apt install python3-pip -y ;
+          apt-get install mysql-server -y ;
+          apt-get install libmysqlclient-dev -y ;
+          pip3 install flask-mysqldb;
+          apt install zip -y ;
+          apt install awscli -y ;
+          aws s3 cp s3://my-aws--bucket/pythonFlask.zip /home/ubuntu/ ;
+          unzip /home/ubuntu/pythonFlask.zip -d /home/ubuntu ;
+          chown -R ubuntu:ubuntu /home/ubuntu/pythonFlask ;
+          rm /home/ubuntu/pythonFlask.zip ;
+          python3 /home/ubuntu/pythonFlask/main.py
   appASG:
     Type: "AWS::AutoScaling::AutoScalingGroup"
     Condition: checkEnvAndUser
@@ -162,7 +169,7 @@ Resources:
       AlarmName: !Sub ${env}-Alarm-CPU-GreaterThan-60-CFT
       ComparisonOperator: GreaterThanOrEqualToThreshold
       Dimensions:
-        - Name: AutoScalingCFT
+        - Name: AutoScalingGroupName
           Value: !Ref appASG
       EvaluationPeriods: 2
       MetricName: CPUUtilization
@@ -184,7 +191,7 @@ Resources:
       AlarmName: !Sub ${env}-Alarm-CPU-LessThan-30-CFT
       ComparisonOperator: GreaterThanOrEqualToThreshold
       Dimensions:
-        - Name: AutoScalingCFT
+        - Name: AutoScalingGroupName
           Value: !Ref appASG
       EvaluationPeriods: 1
       MetricName: CPUUtilization
