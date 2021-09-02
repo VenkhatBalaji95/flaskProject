@@ -9,6 +9,6 @@ def homePage():
 
 @view.route("host")
 def host():
-    output = subprocess.run("hostname", stdout=subprocess.PIPE, text = True)
+    output = subprocess.run("hostname", stdout=subprocess.PIPE)
     output = output.stdout.strip()
     return output
