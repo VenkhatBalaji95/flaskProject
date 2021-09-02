@@ -40,7 +40,7 @@ Parameters:
   iamProfile:
     Description: Name or ARN of the IAM instance profile to assign Application
     Type: String
-    Default: "arn:aws:iam::059913497205:role/EC2hasS3fullAccess"
+    Default: "arn:aws:iam::059913497205:instance-profile/EC2hasS3fullAccess"
   appDesiredCapacity:
     Type: Number
     Description: Initial instance capacity of the Auto Scaling Group
