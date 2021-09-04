@@ -1,0 +1,88 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "EC2 Role to download only the pythonFlask.zip object",
+	"Parameters": {
+		"bucketName":	{
+			"Type": "String",
+			"Description": "Bucket Name",
+			"Default": "my-aws--bucket"
+		},
+		"objectName": {
+			"Type": "String",
+			"Description": "Object Name",
+			"Default": "pythonFlask.zip"
+		}
+	},
+	"Resources": {
+		"createManagedPolicy": {
+			"Type": "AWS::IAM::ManagedPolicy",
+			"DependsOn": "createIAMRole",
+			"Properties":	{
+				"ManagedPolicyName": "flaskPolicy",
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Action": [
+								"s3:GetObject"
+							],
+							"Resource": { "Fn::Sub": [ "arn:aws:s3:::${bucket}/${object}", { "bucket": {"Ref" : "bucketName" }, "object": {"Ref" : "objectName" } } ]},
+							"Condition": {
+                "StringEquals": {
+                    "s3:ExistingObjectTag/iamInstancePolicy": "${aws:PrincipalTag/iamInstancePolicy}"
+                }
+            	}
+						}
+					]
+				},
+				"Roles": [
+          {
+            "Ref": "createIAMRole"
+          }
+        ]
+			}
+		},
+		"createIAMRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"RoleName": "flaskRole",
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Action":	[
+								"sts:AssumeRole"
+							],
+							"Principal": {
+								"Service": [
+									"ec2.amazonaws.com"
+								]
+							}
+						}
+					]
+				},
+				"Description": "Role to download the pythonFlask.zip object from my-aws--bucket bucket",
+				"Tags": [
+					{
+						"Key": "iamInstancePolicy",
+						"Value": "YES"
+					}
+				]
+			}
+		},
+		"createInstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"DependsOn": "createManagedPolicy",
+			"Properties": {
+				"InstanceProfileName": "flaskRole",
+				"Roles": [
+					{
+            "Ref": "createIAMRole"
+          }
+				]
+			}
+		}
+	}
+}
