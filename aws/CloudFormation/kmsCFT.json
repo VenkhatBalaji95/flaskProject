@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "Template to create an Admin user and KMS key",
+	"Description": "Template to KMS key",
 	"Parameters": {
 		"roleName": {
 			"Type": "String",

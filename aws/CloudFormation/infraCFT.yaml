@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: |
-  This template will create 
-  VPC, Internet Gateway, Private & Public subnet's
-  Security Group
-  EFS
+  Template to create 
+  VPC, Internet Gateway, Private & Public subnet's,
+  Security Group,
+  EFS,
   NAT instance
 Parameters:
   env:
