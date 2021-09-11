@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "Template to KMS key",
+	"Description": "Template to create a KMS key",
 	"Parameters": {
 		"roleName": {
 			"Type": "String",
