@@ -422,3 +422,48 @@ Outputs:
         - - !Ref user
           - !Ref env
           - loadBalancer
+  vpcID:
+    Description: VPC ID
+    Value: !Ref createVPC
+    Export:
+      Name: !Sub ${user}-${env}-vpc
+  publicRoute:
+    Description: Public route table ID
+    Value: !Ref publicRouteTable
+    Export:
+      Name: !Sub ${user}-${env}-publicRouteTable
+  privateRoute:
+    Description: Private route table ID
+    Value: !Ref privateRouteTable
+    Export:
+      Name: !Sub ${user}-${env}-privateRouteTable
+  publicSubnet1:
+    Description: Public Subnet one
+    Value: !Ref createPublicSubnet1
+    Export:
+      Name: !Sub ${user}-${env}-publicSubnetOne
+  publicSubnet2:
+    Description: Public Subnet two
+    Value: !Ref createPublicSubnet2
+    Export:
+      Name: !Sub ${user}-${env}-publicSubnetTwo
+  privateSubnet1:
+    Description: Private Subnet one
+    Value: !Ref createPrivateSubnet1
+    Export:
+      Name: !Sub ${user}-${env}-privateSubnetOne
+  privateSubnet2:
+    Description: Private Subnet two 
+    Value: !Ref createPrivateSubnet2
+    Export:
+      Name: !Sub ${user}-${env}-privateSubnetTwo
+  AppSG:
+    Description: Application Security Group ID
+    Value: !Ref appSG
+    Export:
+      Name: !Sub ${user}-${env}-APPSG
+  lbSG:
+    Description: Load Balancer Security Group
+    Value: !Ref loadBalancerSG
+    Export:
+      Name: !Sub ${user}-${env}-LBSG

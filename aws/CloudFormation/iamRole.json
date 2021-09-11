@@ -1,16 +1,31 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "EC2 Role to download only the pythonFlask.zip object",
+	"Description": "Template to create an EC2 Role to download only the pythonFlask.zip object",
 	"Parameters": {
 		"bucketName":	{
 			"Type": "String",
 			"Description": "Bucket Name",
-			"Default": "my-aws--bucket"
+			"Default": "venkhat1128"
 		},
 		"objectName": {
 			"Type": "String",
 			"Description": "Object Name",
 			"Default": "pythonFlask.zip"
+		},
+		"roleName": {
+			"Type": "String",
+			"Description": "IAM role name",
+			"Default": "flaskRole"
+		},
+		"region": {
+			"Type": "String",
+			"Description": "Bucket region name",
+			"Default": "ap-south-1"
+		},
+		"accessPointName": {
+			"Type": "String",
+			"Description": "S3 Access point",
+			"Default": "access-point-cft"
 		}
 	},
 	"Resources": {
@@ -27,12 +42,10 @@
 							"Action": [
 								"s3:GetObject"
 							],
-							"Resource": { "Fn::Sub": [ "arn:aws:s3:::${bucket}/${object}", { "bucket": {"Ref" : "bucketName" }, "object": {"Ref" : "objectName" } } ]},
-							"Condition": {
-                "StringEquals": {
-                    "s3:ExistingObjectTag/iamInstancePolicy": "${aws:PrincipalTag/iamInstancePolicy}"
-                }
-            	}
+							"Resource": [ 
+								{ "Fn::Sub": "arn:aws:s3:::${bucketName}/*" },
+								{ "Fn::Sub": "arn:${AWS::Partition}:s3:${region}:${AWS::AccountId}:accesspoint/${accessPointName}/object/pythonFlask.zip" }
+							]
 						}
 					]
 				},
@@ -46,7 +59,7 @@
 		"createIAMRole": {
 			"Type": "AWS::IAM::Role",
 			"Properties": {
-				"RoleName": "flaskRole",
+				"RoleName": { "Ref" : "roleName" },
 				"AssumeRolePolicyDocument": {
 					"Version": "2012-10-17",
 					"Statement": [
@@ -63,7 +76,7 @@
 						}
 					]
 				},
-				"Description": "Role to download the pythonFlask.zip object from my-aws--bucket bucket",
+				"Description": { "Fn::Sub": "Role to download the pythonFlask.zip object from ${bucketName} bucket" },
 				"Tags": [
 					{
 						"Key": "iamInstancePolicy",
@@ -76,13 +89,49 @@
 			"Type": "AWS::IAM::InstanceProfile",
 			"DependsOn": "createManagedPolicy",
 			"Properties": {
-				"InstanceProfileName": "flaskRole",
+				"InstanceProfileName": { "Ref" : "roleName" },
 				"Roles": [
 					{
             "Ref": "createIAMRole"
           }
 				]
 			}
+		},
+		"createAdminUser": {
+			"Type": "AWS::IAM::User",
+			"Properties": {
+				"ManagedPolicyArns": [ "arn:aws:iam::aws:policy/AdministratorAccess" ],
+				"UserName": "admin",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": "admin"
+					}
+				]
+			}
+		},
+		"createFlaskUser": {
+			"Type": "AWS::IAM::User",
+			"DependsOn": "createManagedPolicy",
+			"Properties": {
+				"ManagedPolicyArns": [ {"Ref": "createManagedPolicy"} ],
+				"UserName": "flaskUser",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": "flaskUser"
+					}
+				]
+			}
 		}
+	},
+	"Outputs" : {
+	  "roleARN" : {
+	    "Description" : "Role ARN",
+	    "Value" : { "Fn::GetAtt" : [ "createIAMRole", "Arn" ] },
+	    "Export" : {
+	      "Name" : { "Fn::Sub": "${roleName}-ARN" }
+	    }
+	  }
 	}
 }

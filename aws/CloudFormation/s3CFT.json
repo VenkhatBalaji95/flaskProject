@@ -1,0 +1,220 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Template to create a S3 bucket and access point in Mumbai region. It also creates a Gateway endpoint",
+	"Parameters": {
+		"region": {
+			"Type": "String",
+			"Description": "Bucket region name",
+			"Default": "ap-south-1"
+		},
+		"bucketName": {
+			"Type": "String",
+			"Description": "S3 bucket name",
+			"Default": "venkhat1128"
+		},
+		"kmsKey": {
+			"Type": "String",
+			"Description": "KMS key name",
+			"Default": "KMSflask"
+		},
+		"accessPointName": {
+			"Type": "String",
+			"Description": "S3 Access point",
+			"Default": "access-point-cft"
+		},
+		"user": {
+			"Type": "String",
+			"Description": "Enter your name",
+			"Default": "gameChanger"
+		},
+		"env": {
+			"Type": "String",
+			"Description": "Enter enviornment name",
+			"Default": "dit",
+			"AllowedValues": ["dit", "sit"]
+		},
+		"roleName": {
+			"Type": "String",
+			"Description": "IAM role name",
+			"Default": "flaskRole"
+		}
+	},
+	"Conditions": {
+		"checkRegion": {
+			"Fn::Equals" : [
+				{"Ref": "region"},
+				"ap-south-1"
+			]
+		}
+	},
+	"Resources": {
+		"createS3Bucket": {
+			"Type" : "AWS::S3::Bucket",
+			"Condition": "checkRegion",
+			"Properties": {
+				"AccessControl": "Private",
+				"BucketEncryption": {
+					"ServerSideEncryptionConfiguration": [
+						{
+							"BucketKeyEnabled": true,
+							"ServerSideEncryptionByDefault": {
+								"KMSMasterKeyID": { "Fn::ImportValue": { "Fn::Sub": "${kmsKey}-ARN" } },
+								"SSEAlgorithm": "aws:kms"
+							}
+						}
+					]
+				},
+				"BucketName": { "Ref": "bucketName" },
+				"PublicAccessBlockConfiguration": {
+					"BlockPublicAcls" : true,
+				  "BlockPublicPolicy" : true,
+				  "IgnorePublicAcls" : true,
+				  "RestrictPublicBuckets" : true
+				},
+				"VersioningConfiguration": {
+					"Status": "Enabled"
+				},
+				"Tags": [
+					{
+						"Key": "iamInstancePolicy",
+						"Value": "YES"
+					},
+					{
+						"Key": "Name",
+						"Value": { "Fn::Sub": "${bucketName}-CFT" }
+					}
+				]
+			}
+		},
+		"createBucketPolicy": {
+			"Type" : "AWS::S3::BucketPolicy",
+			"Condition": "checkRegion",
+			"DependsOn": "createS3Bucket",
+			"Properties": {
+				"Bucket": { "Ref": "bucketName" },
+        "PolicyDocument": {
+        	"Version": "2012-10-17",
+        	"Statement": [
+        		{
+        			"Effect": "Allow",
+        			"Principal": {
+        				"AWS": [
+        					{ "Fn::ImportValue": { "Fn::Sub": "${roleName}-ARN" } },
+        					{ "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:user/admin" },
+									{ "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:user/flaskUser" }
+        				]
+        			},
+        			"Action": "s3:GetObject",
+        			"Resource": [
+        				{ "Fn::GetAtt": [ "createS3Bucket", "Arn" ] },
+        				{ "Fn::Join": [ "", [ { "Fn::GetAtt": [ "createS3Bucket", "Arn" ] }, "/*" ] ] }
+        			]
+        		}
+        	]
+        }
+			}
+		},
+		"createAccessPoint": {
+			"Type" : "AWS::S3::AccessPoint",
+			"Condition": "checkRegion",
+			"DependsOn": "createBucketPolicy",
+			"Properties": {
+				"Bucket": { "Ref": "bucketName" },
+				"Name": { "Ref": "accessPointName" },
+				"Policy": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"AWS": [
+									{ "Fn::ImportValue" : { "Fn::Sub": "${roleName}-ARN" } },
+									{ "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:user/admin" },
+									{ "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:user/flaskUser" }
+								]
+							},
+							"Action": "s3:GetObject",
+							"Resource": [
+								{
+									"Fn::Sub": "arn:${AWS::Partition}:s3:${region}:${AWS::AccountId}:accesspoint/access-point-cft/object/pythonFlask.zip"
+								}
+							]
+						}
+					]
+				},
+				"PublicAccessBlockConfiguration": {
+					"BlockPublicAcls" : true,
+				  "BlockPublicPolicy" : true,
+				  "IgnorePublicAcls" : true,
+				  "RestrictPublicBuckets" : true
+				},
+				"VpcConfiguration": {
+					"VpcId": { "Fn::ImportValue": { "Fn::Sub" : "${user}-${env}-vpc" } }
+				}
+			}
+		},
+		"createVPCEndPoint": {
+			"Type": "AWS::EC2::VPCEndpoint",
+			"Condition": "checkRegion",
+			"DependsOn": "createAccessPoint",
+			"Properties": {
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": "*",
+							"Action": "s3:GetObject",
+							"Resource": [
+								{ "Fn::Join": [ "", [ { "Fn::GetAtt": [ "createS3Bucket", "Arn" ] }, "/*" ] ] },
+								{ "Fn::Join": [ "", [ { "Fn::GetAtt": [ "createAccessPoint", "Arn" ] }, "/object/pythonFlask.zip" ] ] }
+							],
+							"Condition": {
+                "ArnEquals": {
+                  "aws:PrincipalArn": { "Fn::ImportValue" : { "Fn::Sub": "${roleName}-ARN" } }
+                }
+            	}
+						}
+					]
+				},
+				"RouteTableIds": [
+					{ "Fn::ImportValue" : { "Fn::Sub" : "${user}-${env}-publicRouteTable" } },
+					{ "Fn::ImportValue" : { "Fn::Sub" : "${user}-${env}-privateRouteTable" } }
+				],
+				"ServiceName": {"Fn::Sub": "com.amazonaws.${region}.s3"},
+				"VpcEndpointType": "Gateway",
+				"VpcId": { "Fn::ImportValue" : { "Fn::Sub" : "${user}-${env}-vpc" } }
+			}
+		}
+	},
+	"Outputs": {
+		"S3Bucket": {
+			"Description": "S3 bucket name",
+			"Value": { "Ref": "bucketName" },
+			"Export": {
+				"Name": { "Fn::Sub": "S3-${bucketName}" }
+			}
+		},
+		"S3BucketARN": {
+			"Description": "S3 bucket ARN",
+			"Value": { "Fn::GetAtt": [ "createS3Bucket", "Arn" ] },
+			"Export": {
+				"Name": { "Fn::Sub": "S3-${bucketName}-ARN" }
+			}
+		},
+		"accessPoint": {
+			"Description": "S3 Access point name",
+			"Value": { "Ref": "accessPointName" },
+			"Export": {
+				"Name": { "Fn::Sub": "AccessPoint-${accessPointName}" }
+			}
+		},
+		"accessPointARN": {
+			"Description": "S3 Access point ARN",
+			"Value": { "Fn::GetAtt": [ "createAccessPoint", "Arn" ] },
+			"Export": {
+				"Name": { "Fn::Sub": "AccessPoint-${accessPointName}-ARN" }
+			}
+		}
+	}
+}
