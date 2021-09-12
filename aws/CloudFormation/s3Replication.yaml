@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template to create only a bucket with replication policy
+Parameters:
+  sourceBucketName:
+    Type: String
+    Description: Source bucket Name
+    Default: venkhatsourcebucket
+  destinationBucketName:
+    Type: String
+    Description: Destination bucket name
+    Default: venkhatreplicationbucket
+  sourceKMSKeyARN:
+    Type: String
+    Description: KMS key ARN for source S3 bucket
+    Default: "arn:aws:kms:ap-south-1:059913497205:key/a7becffa-48c7-4821-82c6-cfe4c157a25e"
+  destinationKMSKeyARN:
+    Type: String
+    Description: KMS key ARN for destination S3 bucket 
+    Default: "arn:aws:kms:ap-southeast-1:059913497205:key/0b217ede-8ad4-4e42-beb1-be8d8ae52c5a"
+  iamRoleARN:
+    Type: String
+    Description: IAM role which S3 can use to do replication
+    Default: arn:aws:iam::059913497205:role/S3hasS3FullAccess
+  filterPrefix:
+    Type: String
+    Description: Replicate Filter Prefix
+    Default: python
+  filterTagKey:
+    Type: String
+    Description: Replicate filter tag key
+    Default: replicate
+  filterTagValue:
+    Type: String
+    Description: Replicate filter tag value
+    Default: "yes"
+  priority:
+    Type: String
+    Description: Choose priority if the replication was not set for destination bucket
+    Default: 5
+Resources:
+  createS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref sourceKMSKeyARN
+              SSEAlgorithm: aws:kms
+      BucketName: !Ref sourceBucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      ReplicationConfiguration:
+        Role: !Ref iamRoleARN
+        Rules:
+          - Destination:
+              Bucket: !Sub arn:aws:s3:::${destinationBucketName}
+              EncryptionConfiguration:
+                ReplicaKmsKeyID: !Ref destinationKMSKeyARN
+            DeleteMarkerReplication:
+              Status: Disabled
+            Filter:
+              And:
+                Prefix: !Ref filterPrefix
+                TagFilters:
+                  - Key: !Ref filterTagKey
+                    Value: !Ref filterTagValue
+            Priority: !Ref priority
+            SourceSelectionCriteria:
+              SseKmsEncryptedObjects:
+                Status: Enabled
+            Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled
