@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template to create a new & empty file system and also to create mount target for this EFS file system
+Parameters:
+  env:
+    Type: String
+    Description: Environment name
+    Default: dit
+    AllowedValues:
+      - dit
+      - sit
+  kmsKeyARN:
+    Type: String
+    Description: KMS key ARN
+    Default: "arn:aws:kms:ap-south-1:059913497205:key/a7becffa-48c7-4821-82c6-cfe4c157a25e"
+  securityGroup:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security Group ID
+    Default: sg-0d15e11400e67cd3e
+  mountTargetSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: Mount target Subnet one
+    Default: subnet-0d7fbda544122efd7
+  mountTargetSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: Mount target Subnet two
+    Default: subnet-072d5b12602626bc6
+  performanceMode:
+    Type: String
+    Description: Performance mode
+    Default: generalPurpose
+    AllowedValues:
+      - generalPurpose
+      - maxIO
+  throughputMode:
+    Type: String
+    Description: Throughput Mode - bursting or provisioned
+    Default: bursting
+    AllowedValues:
+      - bursting
+      - provisioned
+  provisionedThroughPutInMibps:
+    Type: String
+    Description: Enter Throughput in mibps if the EFS through put mode is Provisioned
+    Default: ""
+  iamRole:
+    Type: String
+    Description: IAM role to control NFS access to an EFS file system
+    Default: arn:aws:iam::059913497205:role/flaskRole
+Conditions:
+  provisionedThroughPut: !Not
+    - !Equals
+      - !Ref provisionedThroughPutInMibps
+      - ""
+Resources:
+  createEFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      BackupPolicy:
+        Status: ENABLED
+      Encrypted: True
+      FileSystemPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - elasticfilesystem:ClientMount
+              - elasticfilesystem:ClientWrite
+              - elasticfilesystem:ClientRootAccess
+            Principal:
+              AWS: !Ref iamRole
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub EFS-${env}-CFT
+      KmsKeyId: !Ref kmsKeyARN
+      PerformanceMode: !Ref performanceMode
+      ThroughputMode: !Ref throughputMode
+      ProvisionedThroughputInMibps: !If
+        - provisionedThroughPut
+        - !Ref provisionedThroughPutInMibps
+        - !Ref AWS::NoValue
+  createMountTarget1:
+    Type: AWS::EFS::MountTarget
+    DependsOn: createEFS
+    Properties:
+      FileSystemId: !Ref createEFS
+      SecurityGroups: !Ref securityGroup
+      SubnetId: !Ref mountTargetSubnet1
+  createMountTarget2:
+    Type: AWS::EFS::MountTarget
+    DependsOn: createEFS
+    Properties:
+      FileSystemId: !Ref createEFS
+      SecurityGroups: !Ref securityGroup
+      SubnetId: !Ref mountTargetSubnet2
