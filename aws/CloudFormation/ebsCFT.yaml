@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template to create EBS volume
+Parameters:
+  AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: Availability zone to create the EBS
+    Default: ap-south-1a
+  volumeType:
+    Type: String
+    Description: Volume type
+    Default: gp2
+  volumeSize:
+    Type: Number
+    Description: Volume size
+    Default: 10
+  kmsKeyARN:
+    Type: String
+    Description: KMS key ARN
+    Default: "arn:aws:kms:ap-south-1:059913497205:key/a7becffa-48c7-4821-82c6-cfe4c157a25e"
+  snapshot:
+    Type: String
+    Description: Snapshot ID
+    Default: snap-0fcaf4112855f2564
+  throughput:
+    Type: String
+    Description: "Throughput value for 'gp3' volume type"
+    Default: ""
+Conditions:
+  ThroughPut: !Not
+    - !Equals
+      - !Ref throughput
+      - ""
+  snapshotID: !Not
+    - !Equals
+      - !Ref snapshot
+      - ""
+Resources:
+  createEBS:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Ref AZ
+      Encrypted: true
+      KmsKeyId: !Ref kmsKeyARN
+      Size: !Ref volumeSize
+      SnapshotId: !If
+        - snapshotID
+        - !Ref snapshot
+        - !Ref AWS::NoValue
+      Throughput: !If
+        - ThroughPut
+        - !Ref throughput
+        - !Ref AWS::NoValue
+      VolumeType: !Ref volumeType
+      Tags:
+        - Key: Name
+          Value: EBS-CFT
