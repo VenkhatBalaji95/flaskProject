@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template to create a SNS topic
+Parameters:
+  topicName:
+    Type: String
+    Description: SNS Topic Name
+    Default: SNS-Topic-CFT
+  emailGroup:
+    Type: CommaDelimitedList
+    Description: "Email ID's"
+    Default: "venkatbalaji372@gmail.com,venkhatbalaji1607@gmail.com"
+  kmsKeyARN:
+    Type: String
+    Description: KMS Key ARN
+    Default: "arn:aws:kms:ap-south-1:059913497205:key/a7becffa-48c7-4821-82c6-cfe4c157a25e"
+Resources:
+  createSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId: !Ref kmsKeyARN
+      Subscription:
+        - Endpoint: !Select [0, !Ref emailGroup]
+          Protocol: email
+        - Endpoint: !Select [1, !Ref emailGroup]
+          Protocol: email
+      TopicName: !Ref topicName
+      Tags:
+        - Key: Name
+          Value: !Ref topicName
