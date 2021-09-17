@@ -1,0 +1,70 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Template to create the EC2 Event trigger which will invoke the Lmabda function",
+	"Parameters": {
+		"lambdaARN":	{
+			"Type": "String",
+			"Description": "Lambda ARN which needs to be triggered for an event change",
+			"Default": "arn:aws:lambda:ap-south-1:059913497205:function:cloudwatchtest"
+		},
+		"instanceID": {
+			"Type": "List<AWS::EC2::Instance::Id>",
+			"Description": "Instance ID details",
+			"Default": "i-08bfe60bf4695eecd,i-0365cd366bcc529ea"
+		},
+		"scheduleState": {
+			"Type": "String",
+			"Description": "Event schedule state either 'DISABLED' or 'ENABLED'",
+			"Default": "ENABLED",
+			"AllowedValues": [
+				"ENABLED",
+				"DISABLED"
+			]
+		},
+		"instanceState": {
+			"Type": "CommaDelimitedList",
+			"Description": "Instance state to trigger the event",
+			"Default": "running,stopped,terminated"
+		},
+		"ruleName": {
+			"Type": "String",
+			"Description": "Event rule name",
+			"Default": "Instance-Event-CFT"
+		}
+	},
+	"Resources": {
+		"createEvent": {
+			"Type": "AWS::Events::Rule",
+			"Properties": {
+				"Description": { "Fn::Sub": "EC2 event trigger which will trigger the lambda - ${lambdaARN}" },
+				"EventPattern": {
+					"source": [ "aws.ec2" ],
+					"detail-type": [ "EC2 Instance State-change Notification" ],
+					"detail": {
+					  "state": { "Ref": "instanceState" },
+					  "instance-id": { "Ref": "instanceID" }
+					}
+				},
+				"Name": { "Ref": "ruleName" },
+				"State": { "Ref": "scheduleState" },
+				"Targets": [
+					{
+						"Arn": { "Ref": "lambdaARN" },
+						"Id": "Cloudwatch-Event-trigger",
+						"Input": "{\"name\": \"venkhat\",\"age\": \"26\"}"
+					}
+				]
+			}
+		},
+		"createPermissionToInvokeLambda": {
+			"Type" : "AWS::Lambda::Permission",
+			"DependsOn": "createEvent",
+			"Properties": {
+				"Action": "lambda:InvokeFunction",
+				"FunctionName": { "Ref": "lambdaARN" },
+				"Principal": "events.amazonaws.com",
+				"SourceArn": { "Fn::GetAtt": ["createEvent", "Arn"] }
+			}
+		}
+	}
+}
