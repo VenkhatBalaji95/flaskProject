@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template to create a metric filter with an alarm.
+Parameters:
+  filterPattern:
+    Type: String
+    Description: Filter pattern
+    Default: '?"Append" ?"Failing"'
+  logGroupName:
+    Type: String
+    Description: Log group name
+    Default: "/aws/lambda/cloudwatchtest"
+  metricName:
+    Type: String
+    Description: Metric Name
+    Default: LambdaMetricCFT
+  metricNamespace:
+    Type: String
+    Description: Custom namespace name
+    Default: LambdaNamespace
+  metricValue:
+    Type: Number
+    Description: Metric value
+    Default: 1
+  snsARN:
+    Type: CommaDelimitedList
+    Description: SNS ARN
+    Default: "arn:aws:sns:ap-south-1:059913497205:SNS-Topic-CFT"
+  alarmName:
+    Type: String
+    Description: Alarm Name
+    Default: LambdaAlarm
+  dataPointsToAlarm:
+    Type: String
+    Description: Data points to alarm.
+    Default: ""
+  evalutationPeriod:
+    Type: Number
+    Description: Evaluation period
+    Default: 1
+  period:
+    Type: Number
+    Description: Statistics period
+    Default: 300
+  statistic:
+    Type: String
+    Description: Statistic
+    Default: Sum
+  thresholdValue:
+    Type: Number
+    Description: Threshold Value
+    Default: 3
+  comparisonOperator:
+    Type: String
+    Description: Comparison operator
+    Default: GreaterThanThreshold
+Conditions:
+  dataPointCondition: !Not
+    - !Equals
+      - !Ref dataPointsToAlarm
+      - ""
+Resources:
+  createLogMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: !Ref filterPattern
+      LogGroupName: !Ref logGroupName
+      MetricTransformations:
+        - MetricName: !Ref metricName
+          MetricNamespace: !Ref metricNamespace
+          MetricValue: !Ref metricValue
+  createAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn: createLogMetricFilter
+    Properties:
+      AlarmActions: !Ref snsARN
+      AlarmDescription: !Sub Notify if any error messages in the ${logGroupName} cloudwatch Log
+      AlarmName: !Ref alarmName
+      ComparisonOperator: !Ref comparisonOperator
+      DatapointsToAlarm: !If
+        - dataPointCondition
+        - !Ref dataPointsToAlarm
+        - !Ref AWS::NoValue
+      EvaluationPeriods: !Ref evalutationPeriod
+      MetricName: !Ref metricName
+      Namespace: !Ref metricNamespace
+      Period: !Ref period
+      Statistic: !Ref statistic
+      Threshold: !Ref thresholdValue
