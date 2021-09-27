@@ -22,7 +22,7 @@ ENV user=venkhat
 
 RUN set -x && \
   apt update -y && \
-  apt install -y sudo git wget tar zip python3-flask python3-pip mysql-server libmysqlclient-dev && \
+  apt install -y sudo git wget vim tar zip python3-flask python3-pip mysql-server libmysqlclient-dev && \
   pip3 install flask-mysqldb && \
   useradd -m ${user}
 
@@ -30,7 +30,7 @@ WORKDIR /home/${user}
 
 USER ${user}
 
-COPY --from=project --chown=${user} /project/flaskProject/pythonFlask .
+COPY --from=project --chown=${user} /project/flaskProject/docker/dockerFlask .
 
 EXPOSE 5500
 

@@ -1,0 +1,16 @@
+Docker installation on ubuntu: https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+
+Docker network:
+bridge type network (default) --> It is best when we need multiple containers to communicate on the same Docker host.
+Steps to create --> sudo docker network create --driver bridge --subnet=100.1.0.0/16 --ip-range=100.1.1.0/24 --gateway=100.1.1.0 flaskNetwork
+
+Steps to run the container:
+Run mysql container --> sudo docker run -v /home/venkhat/Docker/myowndata:/var/lib/mysql --name mysql --network flaskNetwork -e MYSQL_ROOT_PASSWORD=admin1234 -d mysql:latest
+Login to mysql --> mysql -h 100.1.1.1 -u root -p 
+Run flask container --> sudo docker run --network flaskNetwork -dit -p 5500:5500 --name myflask venkhat/flaskproject:v2
+
+Docker storage driver:
+Storage driver stores image and container layers.
+The storage driver controls how images and containers are stored and managed on your Docker host.
+A storage driver handles the details about the way these layers interact with each other
+overlay2 --> It is the preferred storage driver for all currently supported Linux distributions, and requires no extra configuration.
