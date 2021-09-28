@@ -1,0 +1,37 @@
+version: "3.3"
+services:
+  flaskApp:
+    image: venkhat/flaskproject:v2
+#   docker-compose up -d --scale flaskApp=5
+    ports:
+      - "5500-5504:5500"
+    networks:
+      flaskComposeNetwork:
+    depends_on:
+      - mysqlDB
+    labels:
+      - "author=venkhat"
+      - "project=Python Flask"
+  mysqlDB:
+    image: mysql:latest
+    container_name: mysql
+    env_file:
+      - .env
+    volumes:
+      - flaskVolume:/var/lib/mysql
+    networks:
+      flaskComposeNetwork:
+        ipv4_address: 100.8.1.10
+    labels:
+      - "author=venkhat"
+      - "project=Python Flask"
+volumes:
+  flaskVolume:
+    driver: local
+networks:
+  flaskComposeNetwork:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 100.8.0.0/16
