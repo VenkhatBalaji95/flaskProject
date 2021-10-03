@@ -1,0 +1,44 @@
+remote_user --> It is name of the user account (user that logged into the machine)
+
+become:
+	Ansible allows you to ‘become’ another user, different from the user that logged into the machine (remote user)
+
+	Directives: It can be defined in play / task level, but are overridden by connection variables as they can be host specific.
+
+	become - set to ‘true’/’yes’ to activate privilege escalation.
+	become_user - set to user with desired privileges. Default is root
+	become_method - overrides the default method set in ansible.cfg
+
+	When using become_user to a user other than root, the module arguments are briefly written into a random tempfile in /tmp
+
+
+handlers:
+	Sometimes you want a task to run only when a change is made on a machine
+
+	Use case --> you may want to restart a service if a task updates the configuration of that service, but not if the configuration is unchanged.
+	If nothing notifies a handler, it will not run.
+
+	Example:
+	- name: template configuration file
+  	template: src=template.j2 dest=/etc/foo.conf
+  	notify:
+     	- restart memcached
+     	- restart apache
+     	
+  handlers notified within pre_tasks, tasks, and post_tasks sections are automatically flushed in the end of section where they were notified;
+
+	handlers notified within roles section are automatically flushed in the end of tasks section, but before any tasks handlers.
+
+	meta: flush_handlers task triggers any handlers that have been notified at that point in the play.
+
+
+Tips:
+	Syntax validation --> use ansible-playbook with the --syntax-check flag. This will run the playbook file 														through the parser to ensure its included files, roles, etc. have no syntax problems.
+
+	Detailed output for modules --> use the --verbose flag
+
+	To see affected hosts --> use --list-hosts
+
+
+When:
+	Also be aware that when combining "when" with "with_items" (or any other loop statement), the when statement is processed separately for each item

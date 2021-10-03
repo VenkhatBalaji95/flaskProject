@@ -1,0 +1,146 @@
+---
+  - name: Deploy flask application
+    hosts: "{{ inventory_group }}"
+    gather_facts: true
+    remote_user: ubuntu
+    ignore_unreachable: no
+    any_errors_fatal: true
+    vars:
+      inventory_group: app
+      copy: yes
+    pre_tasks:
+      - name: Pre task
+        shell: echo $SHELL
+        register: shell_type
+        ignore_errors: True
+    tasks:
+      - name: Include vars
+        include_vars:
+          dir: vars
+      - name: "Create {{ user }}, {{ group }} and install dependencies"
+        block:
+          - name: Apt update
+            apt:
+              update_cache: yes
+          - name: "Create {{ group }} group"
+            group:
+              name: "{{ group }}"
+              state: present
+          - name: "Create {{ user }} user"
+            user:
+              name: "{{ user }}"
+              shell: "{{ shell_type.stdout }}"
+              groups: "{{ group }},sudo"
+              append: yes
+              state: present
+          - name: Set up authorized key
+            authorized_key:
+              user: "{{ user }}"
+              state: present
+              key: "{{ lookup('file', '/home/venkhat/.ssh/id_rsa.pub') }}"
+          - name: Passwordless for Sudo users
+            lineinfile:
+              path: /etc/sudoers
+              regex: '%sudo\s'
+              line: "%sudo   ALL=(ALL:ALL) NOPASSWD:ALL"
+              state: present
+          - name: Install dependencies
+            apt:
+              name: "{{ item }}"
+              state: present
+            loop:
+              - wget
+              - vim
+              - tar
+              - zip
+              - python3-flask
+              - python3-pip
+              - mysql-server
+              - libmysqlclient-dev
+          - name: Check Git installed ?
+            command: dpkg-query -l git
+            register: git_exists
+            ignore_errors: true
+          - name: Install git
+            apt:
+              name: git
+              state: present
+            when: git_exists.rc != 0
+          - name: Install flask-mysqldb
+            command: pip3 install flask-mysqldb
+            notify:
+              - testhandler
+        become: yes
+        become_user: root
+        become_method: sudo
+        when:
+          (ansible_distribution|lower == "{{ distribution }}") and 
+          (ansible_lsb.release|float >= {{ release }}) and
+          (shell_type.stdout == "/bin/bash" or shell_type.stdout == "/bin/sh")
+        tags:
+          - setup
+      - name: "Deploy code"
+        block:
+          - name: Clone git repo
+            git:
+              repo: "{{ app.repo }}"
+              version: "{{ app.version }}"
+              dest: "{{ app.deploy_dir }}"
+              update: yes
+              force: yes
+            notify:
+              - testhandler
+          - name: Force all notified handlers to run now
+            meta: flush_handlers
+        become: yes
+        become_user: "{{ user }}"
+        become_method: sudo
+        tags:
+          - update
+      - name: "Copy file"
+        block:
+          - name: Include vars
+            include_vars:
+              dir: vars
+          - name: Check directory exists?
+            stat:
+              path: "{{ copy.dest }}"
+            register: path
+          - name: Create directory
+            file:
+              path: "{{ copy.dest }}"
+              state: directory
+              owner: "{{ user }}"
+              group: "{{ group }}"
+              recurse: yes
+          - name: copy file
+            copy:
+              src: "{{ copy.src }}"
+              dest: "{{ copy.dest }}"
+              force: yes
+              owner: "{{ user }}"
+              group: "{{ group }}"
+            notify:
+              - testhandler
+        rescue:
+          - name: Print when errors
+            debug:
+              msg: "There is an error!"
+        always:
+          - name: Print always
+            debug:
+              msg: "Print always!"
+        when: copy
+        become: yes
+        become_user: "{{ user }}"
+        tags:
+          - copy
+    post_tasks:
+      - name: Post task
+        debug:
+          msg: "This is post task!"
+    handlers:
+      - name: testhandler
+        debug:
+          msg: "This is handler. Printing value from Inventory vars - {{ inv }}"
+...

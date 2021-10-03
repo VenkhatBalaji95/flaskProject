@@ -1,0 +1,5 @@
+[app]
+65.2.148.37
+
+[app:vars]
+inv=dummyvalue

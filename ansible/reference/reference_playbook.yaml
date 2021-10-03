@@ -1,0 +1,72 @@
+---
+  - name: "Running a test playbook" #By default it will be inventory group name
+    hosts: "{{ inventoryGroup }}"
+    gather_facts: yes #default is yes. Facts are information derived from speaking with your remote systems.
+    remote_user: ubuntu #default is ec2-user in my ansible.cfg
+    ignore_unreachable: no #default is no. Ansible will continue to execute the task on the unreachable server if the value is yes.
+    any_errors_fatal: true #use this feature when all tasks must be 100% successful to continue playbook execution
+    vars: # Values which pass during run times takes the higher priority compared to vars and vars_prompt
+      inventoryGroup: test
+      executor: venkhat
+    vars_prompt: #It will prompt for the user input. If the variable is passed using "-e" option during runtime, prompt will not come
+      - name: ports
+        prompt: Port number?
+        private: no #Value will be shown if it is no.
+        confirm: yes 
+    tasks:
+      - name: "Shell type"
+        shell: echo $SHELL # "shell" module runs command through a shell (/bin/sh) on remote node; "command" module will be executed on remote nodes. It will not be processed through the shell, so variables like $HOME and operations like "<", ">", "|", ";" and "&" will not work
+        register: shell_type
+        ignore_errors: True # Ansible will not mark the module as failure if there is any non-zero return exit code
+      - name: "Creating new variable"
+        set_fact:
+          new_variable: "{{ executor|upper }}"
+      - name: printing vars, vars_prompt, host variable values
+        debug:
+          msg:
+            - "inventoryGroup variable - {{ inventoryGroup }}"
+            - "executor variable - {{ executor }}"
+            - "New variable - {{ new_variable }}"
+            - "port variable - {{ ports }}"
+            - "distribution variable - {{ distribution }}"
+            - "release variable - {{ release }}"
+      - name: printing register variable - shell_type
+        debug:
+          msg: 
+            - "Shell type - {{ shell_type.stdout }}"
+            - "Above module is succeeded ? {{ shell_type is succeeded }}"
+            - "Above module is failed ? {{ shell_type is failed }}"
+            - "Above module is skipped ? {{ shell_type is skipped }}"
+      - name: "check /{{ executor }} exists ?"
+        stat:
+          path: "/{{ executor }}"
+        register: path
+      - name: printing register variable - path
+        debug:
+          var: path.stat.exists
+      - name: "create /{{ executor }} directory."
+        file: #File module is used to create a directory. Copy is preffered to copy the file/directory to remote server
+          path: "/{{ executor }}"
+          state: directory
+        become: yes
+        when:
+          #Use the math operation compariosn to compare a string variable with int
+          (ansible_distribution|lower == "{{ distribution }}") and 
+          (ansible_lsb.major_release|int >= {{ release }}) and
+          (shell_type.stdout == "/bin/bash" or shell_type.stdout == "/bin/sh") and
+          (path.stat.exists|lower == "false")
+        notify:
+          - firsthandler
+      - name: printing port number
+        shell: echo {{ ports }}
+    handlers:
+      - name: firsthandler
+        debug:
+          msg: Handler execution
+...
+
+
+#Error handling: https://docs.ansible.com/ansible/latest/user_guide/playbooks_blocks.html#block-error-handling
+#Execution Order --> pre_tasks, roles, tasks, post_tasks
+#Vars --> It can be assigned in play / task level. Variable can come from vars, vars_prompt, inventory, files, runtime
+#To check the package installed or not --> Command: dpkg-query -l "{{ item }}" for "Debian" OS family. rpm -q "{{ item }}" for "RedHat" OS family.
