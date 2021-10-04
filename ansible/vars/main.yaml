@@ -1,5 +1,4 @@
 ---
-inventory_group: app
 group: ansible
 user: ansible
 app:

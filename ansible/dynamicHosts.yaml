@@ -1,0 +1,12 @@
+---
+boto3:
+  region: "ap-south-1"
+  access_key: "access key"
+  secret_access_key: "secret access key"
+ansible:
+  tag: ansibleAppdeploy
+  value: "yes"
+env:
+  tag: environment
+  value: "dit"
+...

@@ -8,6 +8,7 @@
     vars:
       inventory_group: app
       copy: yes
+      inv: "from vars"
     pre_tasks:
       - name: Pre task
         shell: echo $SHELL

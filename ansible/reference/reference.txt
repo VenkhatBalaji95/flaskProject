@@ -42,3 +42,9 @@ Tips:
 
 When:
 	Also be aware that when combining "when" with "with_items" (or any other loop statement), the when statement is processed separately for each item
+
+Dynamic inventory:
+Command to run playbook --> ansible-playbook -i pythonScript playbook.yaml
+								Example: ansible-playbook -i dynamicInventory.py -e inventory_group=ansibleAppdeploy playbook.yaml
+Command to run ad-hoc ansible --> ansible -i pythonScript group -m command. 
+									Example: ansible -i dynamicInventory.py ansibleAppdeploy -m ping
