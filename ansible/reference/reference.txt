@@ -48,3 +48,13 @@ Command to run playbook --> ansible-playbook -i pythonScript playbook.yaml
 								Example: ansible-playbook -i dynamicInventory.py -e inventory_group=ansibleAppdeploy playbook.yaml
 Command to run ad-hoc ansible --> ansible -i pythonScript group -m command. 
 									Example: ansible -i dynamicInventory.py ansibleAppdeploy -m ping
+
+
+
+replace line in a file:
+
+	lineinfile module: Ensure a particular line is in a file, or replace an existing line using a back-referenced regular expression.
+
+	replace module: Replace all instances of a particular string in a file using a back-referenced regular expression.
+
+	blockinfile module: Insert/update/remove a text block surrounded by marker lines
