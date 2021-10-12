@@ -3,9 +3,9 @@
 import boto3,yaml,json,os
 
 def main ():
-  aws_creds = yaml.load(open("vars/dynamicHosts.yaml", "r"), Loader=yaml.FullLoader)["boto3"]
-  ansible = yaml.load(open("vars/dynamicHosts.yaml", "r"), Loader=yaml.FullLoader)["ansible"]
-  env = yaml.load(open("vars/dynamicHosts.yaml", "r"), Loader=yaml.FullLoader)["env"]
+  aws_creds = yaml.load(open("vars/dynamicHosts.yaml", "r"), Loader=yaml)["boto3"]
+  ansible = yaml.load(open("vars/dynamicHosts.yaml", "r"), Loader=yaml)["ansible"]
+  env = yaml.load(open("vars/dynamicHosts.yaml", "r"), Loader=yaml)["env"]
 
   ec2 = boto3.resource("ec2", region_name = aws_creds["region"], aws_access_key_id = os.environ["access_key"], aws_secret_access_key = os.environ["secret_access"])
   ansibleFilter = { 'Name': 'tag:{0}'.format(ansible["tag"]), 'Values':[ansible["value"]] }
