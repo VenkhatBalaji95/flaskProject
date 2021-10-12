@@ -95,12 +95,14 @@ pipeline {
             touch dynamicHosts.yaml
             yq e '.boto3.region="${ditRegion}"' -i dynamicHosts.yaml
             yq e '.ansible.tag="ansibleAppdeploy"' -i dynamicHosts.yaml
-            yq e '.ansible.value="yes"' -i dynamicHosts.yaml
+            yq e '.ansible.value= "yes" | .ansible.value style="double"' -i dynamicHosts.yaml
             yq e '.env.tag="environment"' -i dynamicHosts.yaml
-            if [ "${ditDeploy}" == "yes" ]; then
+            if [ "${ditDeploy}" = "yes" ]; then
+              echo "Inside yes"
               yq e '.env.value="dit"' -i dynamicHosts.yaml
             else
-              yq e '.env.value="no"' -i dynamicHosts.yaml
+              echo "Inside no"
+              yq e '.env.value="no" | .env.value style="double"' -i dynamicHosts.yaml
             fi
             echo "Printing the params..."
             cat dynamicHosts.yaml
