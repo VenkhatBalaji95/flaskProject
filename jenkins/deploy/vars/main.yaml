@@ -1,0 +1,9 @@
+---
+group: ansible
+user: ansible
+app:
+  repo: "https://github.com/VenkhatBalaji95/flaskProject.git"
+  version: master
+  deploy_dir: "/home/ansible/flaskProject"
+distribution: ubuntu
+release: 18.04

@@ -1,0 +1,135 @@
+def accessKey = "access-key"
+def secretAccessKey = "secret-access-key"
+
+pipeline {
+	agent {
+    node {
+      label "ubuntu"
+      customWorkspace "/home/ubuntu/jenkins/workspace/${JOB_NAME}"
+    }
+  }
+  parameters {
+    string (name: "gitBranch", defaultValue: "master", description: "Enter the branch name!")
+    string (name: "gitUrl", defaultValue: "https://github.com/VenkhatBalaji95/flaskProject.git", description: "Enter the git URL")
+    choice (name: "ditDeploy", choices: ["yes","no"], description: "Dit deploy required?")
+    choice (name: "sitDeploy", choices: ["no","yes"], description: "Sit deploy required?")
+    choice (name: "ditRegion", choices: ["ap-south-1"], description: "Dit region")
+    choice (name: "sitRegion", choices: ["ap-south-1"], description: "Sit region")
+  }
+  environment {
+    gitBranch = "${params.gitBranch}".trim()
+    gitUrl = "${params.gitUrl}".trim()
+  }
+  options {
+    timestamps ()
+  }
+  stages {
+    stage ("Pipeline Inputs") {
+      steps {
+        deleteDir()
+        echo "Git branch: ${gitBranch}"
+        echo "Git URL: ${gitUrl}"
+        echo "Dit deploy required: ${ditDeploy}"
+        echo "Sit deploy required: ${sitDeploy}"
+        echo "Dit region: ${ditRegion}"
+        echo "Sit region: ${sitRegion}"
+        script {
+          if (gitBranch == "master") {
+            echo "SIT deployment happens"
+          }
+          else {
+            echo "No SIT deployment"
+          }
+        }
+      }
+    }
+    stage ("Code checkout") {
+      steps {
+        git (branch: "${gitBranch}", url: "${gitUrl}")
+      }
+    }
+    stage ("Zip file") {
+      steps {
+        sh """
+          mkdir target
+          echo "Zipping dockerFlask folder..."
+          zip -r target/dockerFlask.zip docker/dockerFlask
+          echo "Zipping pythonFlask folder..."
+          zip -r target/pythonFlask.zip pythonFlask
+          ls target
+        """
+      }
+    }
+    stage ("Docker image Build and push") {
+      parallel {
+        stage ("Docker project build and push") {
+          steps {
+            dir ("target") {
+              sh """
+                echo "Build Docker project image"
+                sudo docker build --build-arg branch=${gitBranch} --build-arg gitURL=${gitUrl} --build-arg version=18.04 -t venkhat/dockerflask:${BUILD_NUMBER} -f ../jenkins/docker/Dockerfile --no-cache .
+                echo "Push Docker project image"
+                sudo docker push venkhat/dockerflask:${BUILD_NUMBER}
+              """
+            }
+          }
+        }
+        stage ("Flask project build and push") {
+          steps {
+            dir ("target") {
+              sh """
+                echo "Build Flask project image"
+                sudo docker build --build-arg branch=${gitBranch} --build-arg gitURL=${gitUrl} --build-arg version=18.04 -t venkhat/flaskproject:${BUILD_NUMBER} -f ../jenkins/docker/pythonFlaskDockerfile --no-cache .
+                echo "Push Flask project image"
+                sudo docker push venkhat/flaskproject:${BUILD_NUMBER}
+              """
+            }
+          }
+        }
+      }
+    }
+    stage ("Deploy ready") {
+      steps {
+        dir ("jenkins/deploy/vars") {
+          sh """
+            touch dynamicHosts.yaml
+            yq e '.boto3.region="${ditRegion}"' -i dynamicHosts.yaml
+            yq e '.ansible.tag="ansibleAppdeploy"' -i dynamicHosts.yaml
+            yq e '.ansible.value="yes"' -i dynamicHosts.yaml
+            yq e '.env.tag="environment"' -i dynamicHosts.yaml
+            if [ "${ditDeploy}" == "yes" ]; then
+              yq e '.env.value="dit"' -i dynamicHosts.yaml
+            else
+              yq e '.env.value="no"' -i dynamicHosts.yaml
+            fi
+            echo "Printing the params..."
+            cat dynamicHosts.yaml
+            yq e '.app.repo="${gitUrl}"' -i main.yaml
+            yq e '.app.version="${gitBranch}"' -i main.yaml
+            echo "Printing the vars..."
+            cat main.yaml
+          """
+        }
+      }
+    }
+    stage ("Deploy to DIT") {
+      steps {
+        dir ("jenkins/deploy") {
+          withCredentials ([
+            string (credentialsId: "$accessKey", variable: "access_key"),
+            string (credentialsId: "$secretAccessKey", variable: "secret_access"),
+            string (credentialsId: "ansible", variable: "ansibleSSH")
+          ]) {
+            ansiblePlaybook (
+              credentialsId: "Windows", 
+              disableHostKeyChecking: true,
+              playbook: "playbook.yaml",
+              inventory: "dynamicInventory.py",
+              extras: "-e inventory_group=ansibleAppdeploy"
+            )
+          }
+        }
+      }
+    }
+  }
+}
