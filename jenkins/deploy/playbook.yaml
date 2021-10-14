@@ -14,10 +14,16 @@
         shell: echo $SHELL
         register: shell_type
         ignore_errors: True
+        tags:
+          - setup
+          - update
     tasks:
       - name: Include vars
         include_vars:
           dir: vars
+        tags:
+          - setup
+          - update
       - name: "Create {{ user }}, {{ group }} and install dependencies"
         block:
           - name: Apt update
@@ -102,6 +108,9 @@
       - name: Post task
         debug:
           msg: "From Post task: Tag is - {{ lookup('env','BUILD_TAG') }}"
+        tags:
+          - setup
+          - update
     handlers:
       - name: testhandler
         debug:
