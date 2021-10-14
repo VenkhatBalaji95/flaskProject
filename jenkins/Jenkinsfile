@@ -2,7 +2,7 @@ def accessKey = "access-key"
 def secretAccessKey = "secret-access-key"
 
 pipeline {
-	agent {
+  agent {
     node {
       label "ubuntu"
       customWorkspace "/home/ubuntu/jenkins/workspace/${JOB_NAME}"
@@ -15,10 +15,13 @@ pipeline {
     choice (name: "sitDeploy", choices: ["no","yes"], description: "Sit deploy required?")
     choice (name: "ditRegion", choices: ["ap-south-1"], description: "Dit region")
     choice (name: "sitRegion", choices: ["ap-south-1"], description: "Sit region")
+    choice (name: "firstTimeDeploy", choices: ["yes","no"], description: "First time deployment?")
+    string (name: "mailID", defaultValue: "venkatbalaji372@gmail.com", description: "Mail ID")
   }
   environment {
     gitBranch = "${params.gitBranch}".trim()
     gitUrl = "${params.gitUrl}".trim()
+    mailID = "${params.mailID}".trim()
   }
   options {
     timestamps ()
@@ -33,14 +36,8 @@ pipeline {
         echo "Sit deploy required: ${sitDeploy}"
         echo "Dit region: ${ditRegion}"
         echo "Sit region: ${sitRegion}"
-        script {
-          if (gitBranch == "master") {
-            echo "SIT deployment happens"
-          }
-          else {
-            echo "No SIT deployment"
-          }
-        }
+        echo "First time deploy: ${firstTimeDeploy}"
+        echo "Mail ID: ${mailID}"
       }
     }
     stage ("Code checkout") {
@@ -97,13 +94,6 @@ pipeline {
             yq e '.ansible.tag="ansibleAppdeploy"' -i dynamicHosts.yaml
             yq e '.ansible.value= "yes" | .ansible.value style="double"' -i dynamicHosts.yaml
             yq e '.env.tag="environment"' -i dynamicHosts.yaml
-            if [ "${ditDeploy}" = "yes" ]; then
-              echo "Inside yes"
-              yq e '.env.value="dit"' -i dynamicHosts.yaml
-            else
-              echo "Inside no"
-              yq e '.env.value="no" | .env.value style="double"' -i dynamicHosts.yaml
-            fi
             echo "Printing the params..."
             cat dynamicHosts.yaml
             yq e '.app.repo="${gitUrl}"' -i main.yaml
@@ -115,6 +105,9 @@ pipeline {
       }
     }
     stage ("Deploy to DIT") {
+      when {
+        environment name: 'ditDeploy', value: 'yes'
+      }
       steps {
         dir ("jenkins/deploy") {
           withCredentials ([
@@ -122,16 +115,97 @@ pipeline {
             string (credentialsId: "$secretAccessKey", variable: "secret_access"),
             string (credentialsId: "ansible", variable: "ansibleSSH")
           ]) {
-            ansiblePlaybook (
-              credentialsId: "Windows", 
-              disableHostKeyChecking: true,
-              playbook: "playbook.yaml",
-              inventory: "dynamicInventory.py",
-              extras: "-e inventory_group=ansibleAppdeploy"
-            )
+            script {
+              sh """
+              yq e '.env.value="dit"' -i vars/dynamicHosts.yaml
+              cat vars/dynamicHosts.yaml
+              """
+              if (firstTimeDeploy == "yes") {
+                echo "First time deployment!"
+                ansiblePlaybook (
+                  credentialsId: "Windows",
+                  disableHostKeyChecking: true,
+                  playbook: "playbook.yaml",
+                  inventory: "dynamicInventory.py",
+                  extras: "-e inventory_group=ansibleAppdeploy",
+                  tags: "setup, update"
+                )
+              }
+              else {
+                echo "Code update"
+                ansiblePlaybook (
+                  credentialsId: "Windows",
+                  disableHostKeyChecking: true,
+                  playbook: "playbook.yaml",
+                  inventory: "dynamicInventory.py",
+                  extras: "-e inventory_group=ansibleAppdeploy",
+                  tags: "update"
+                )
+              }
+            }
           }
         }
       }
+    }
+    stage ("Deploy to SIT") {
+      when {
+        beforeInput true
+        environment name: 'sitDeploy', value: 'yes'
+      }
+      options {
+        timeout(time: 1, unit: 'MINUTES')
+      }
+      input {
+        message "Do you want to procced SIT deployment?"
+      }
+      steps {
+        dir ("jenkins/deploy") {
+          withCredentials ([
+            string (credentialsId: "$accessKey", variable: "access_key"),
+            string (credentialsId: "$secretAccessKey", variable: "secret_access"),
+            string (credentialsId: "ansible", variable: "ansibleSSH")
+          ]) {
+            script {
+              sh """
+                yq e '.env.value="sit"' -i vars/dynamicHosts.yaml
+                cat vars/dynamicHosts.yaml
+              """
+              if (firstTimeDeploy == "yes") {
+                echo "First time deployment!"
+                ansiblePlaybook (
+                  credentialsId: "Windows",
+                  disableHostKeyChecking: true,
+                  playbook: "playbook.yaml",
+                  inventory: "dynamicInventory.py",
+                  extras: "-e inventory_group=ansibleAppdeploy",
+                  tags: "setup, update"
+                )
+              }
+              else {
+                echo "Code update"
+                ansiblePlaybook (
+                  credentialsId: "Windows",
+                  disableHostKeyChecking: true,
+                  playbook: "playbook.yaml",
+                  inventory: "dynamicInventory.py",
+                  extras: "-e inventory_group=ansibleAppdeploy",
+                  tags: "update"
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  post {
+    always {
+      emailext (
+        subject: "Jenkins ${env.JOB_NAME} build ${currentBuild.currentResult}",
+        body: "<b>DO NOT REPLY! This is an automated mail.</b><br><br>Job: ${env.JOB_NAME} is completed. Build result: ${currentBuild.currentResult}. Build number: ${env.BUILD_NUMBER} <br><br>More Information at ${env.BUILD_URL}",
+        mimeType: "text/html",
+        to: "${mailID}"
+      )
     }
   }
 }
