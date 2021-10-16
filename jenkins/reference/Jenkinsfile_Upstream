@@ -1,0 +1,33 @@
+pipeline {
+  agent {
+    node {
+      label "ubuntu"
+    }
+  }
+  parameters {
+    string (name: "name", defaultValue: "venkhat balaji", description: "Enter your name")
+    choice (name: "test", choices: ["yes","no"])
+  }
+  stages {
+    stage ("First") {
+      steps {
+	echo "First job"
+	echo "Name - ${name}"
+	echo "Tests - ${test}"
+      }
+    }
+    stage ("Trigger") {
+      steps {
+	build (
+	  job: "Second",
+	  parameters: [
+	    string (name: "name", value: "${name}"),
+	    string (name: "testing", value: "${test}")
+	  ],
+	  propagate: "False",
+	  wait: "False"
+	)
+      }
+    }
+  }
+}

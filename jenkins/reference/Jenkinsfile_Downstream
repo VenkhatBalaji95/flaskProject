@@ -1,0 +1,20 @@
+pipeline {
+  agent {
+    node {
+      label "ubuntu"
+    }
+  }
+  parameters {
+    string (name: "name", defaultValue: "test", description: "Enter your name")
+    choice (name: "testing", choices: ["no","yes"])
+  }
+  stages {
+    stage ("Second") {
+      steps {
+	echo "Second job"
+	echo "Name - ${name}"
+	echo "Try - ${testing}"
+      }
+    }
+  }
+}
