@@ -1,1 +1,2 @@
-Pod: https://kubernetes.io/docs/concepts/workloads/pods/
+About Pod: https://kubernetes.io/docs/concepts/workloads/pods/
+Pod config file: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
