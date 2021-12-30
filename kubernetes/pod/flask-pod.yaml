@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flask-pod
+  namespace: default
+  labels:
+    app: flask
+spec:
+  containers:
+    - name: flask-container
+      image: "venkhat/flaskproject:v2"
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 5500
+          protocol: TCP
+  imagePullSecrets: 
+    - name: venkhatcred
+  restartPolicy: "OnFailure"
+...
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-service
+  namespace: default
+spec:
+  selector:
+    app: flask
+  ports:
+    - port: 80
+      targetPort: 5500
+      protocol: TCP
+      name: http
+      nodePort: 30001
+  type: LoadBalancer
+
+  # To create the image pull secret -- kubectl create secret docker-registry venkhatcred --docker-server=https://index.docker.io/v1/ --docker-username=user --docker-password=password --docker-email=xyz@gmail.com -n default
+  # Refer: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line
+  # https://index.docker.io/v1/ is the docker registry for Dockerhub

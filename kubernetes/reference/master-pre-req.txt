@@ -1,0 +1,41 @@
+Master pre-req:
+Kubernetes works on Linux based hosts.
+Minimum - 2CPU,2GB RAM
+Unique hostname, MAC address, and product_uuid for every node
+SWAP disable
+
+Ref - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+
+--------------------------------------------------------------------------
+
+Master (Control plane node) setup:
+
+sudo apt update -y ;
+
+#Disable swap memory
+sudo swapoff -a ;
+
+#Let ip tables see bridge traffic
+sudo modprobe br_netfilter ;
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+br_netfilter
+EOF
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+
+#Apply kernel params
+sudo sysctl --system
+
+Install, configure "systemd" cgroup, enable docker
+
+#kubeadm setup
+sudo apt-get update -y ;
+sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update -y ;
+
+#Install kubeadm, kubelet, kubectl
+sudo apt-get install -y kubelet kubeadm kubectl

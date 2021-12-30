@@ -1,0 +1,48 @@
+Network adapter:
+The network adapter allows the device to communicate over the local area network (LAN), connecting to the internet or to other computers.
+
+------------------------------------------------------------------------------------------------
+
+Container runtime:
+
+To run a container in a pod, k8's uses this containre runtime. There are three runtimes with K8's on Linux. (i) containerd, (ii) CRI-O, (iii) Docker.
+
+Cgroup (Control group) - it is used to constrain resources that are allocated to the processes.Container runtime and Kubelet should have same cgroup driver (systemd).
+In v1.22, if the user is not setting the cgroupDriver field under KubeletConfiguration, kubeadm will default it to systemd for kubelet.
+
+To apply kubelet configuration as a part of "kubeadm init" --> kubeadm init --config kubeadm-config.yaml
+
+Ref - https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
+
+Configure Docker deamon to use "systemd" for the management of container cgroup's.
+
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+
+sudo systemctl enable docker ;
+sudo systemctl daemon-reload ;
+sudo systemctl restart docker ;
+
+Ref - https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+
+------------------------------------------------------------------------------------------------
+
+Install kubeadm - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+
+------------------------------------------------------------------------------------------------
+
+To configure the kubelet cgroup driver - https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
+
+------------------------------------------------------------------------------------------------
+
+To configure the container runtime cgroup driver - https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+
+------------------------------------------------------------------------------------------------
