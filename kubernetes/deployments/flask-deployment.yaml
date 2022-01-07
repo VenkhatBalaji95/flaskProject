@@ -1,0 +1,70 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-deployment
+  namespace: default
+  labels:
+    name: flask-deployment
+  annotations:
+    name: flask-deployment
+spec:
+  selector: #It must match the pod template's labels. Existing ReplicaSets whose pods are selected by this will be the ones affected by this deployment.
+    matchLabels:
+      app: python-flask
+  template:
+    metadata:
+      name: pod-name
+      namespace: default
+      labels:
+        app: python-flask
+    spec:
+      containers:
+        - name: flask-app
+          image: "venkhat/flaskproject:v2"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5500
+              protocol: TCP
+      imagePullSecrets: 
+        - name: venkhatcred
+      restartPolicy: "Always"
+  replicas: 3 #Number of desired pods. Defaults to 1. 
+  minReadySeconds: 3 #Min seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0.
+  strategy:
+    type: "RollingUpdate" #It is Default and replace the old ReplicaSets by new one using rolling update i.e gradually scale down the old ReplicaSets and scale up the new one. "Recreate" Kill all existing pods before creating new ones.
+    rollingUpdate:
+      maxSurge: "20%" #The maximum number of pods that can be scheduled above the desired number of pods. Defaults to 25%.
+      maxUnavailable: "20%" #The maximum number of pods that can be unavailable during the deployment update. Defaults to 25%.
+  revisionHistoryLimit: 8 #The number of old ReplicaSets to retain to allow rollback. Defaults to 10. To find the revision - kubectl rollout history deployment/flask-deployment
+  progressDeadlineSeconds: 600 #The maximum time in seconds for a deployment to make progress before it is considered to be failed. The deployment controller will continue to process failed deployments and a condition with a "ProgressDeadlineExceeded" reason will be surfaced in the deployment status.
+  paused: false #Indicates deployment is paused. To pause manually - kubectl rollout pause deployment/flask-deployment. To resume manually - kubectl rollout resume deployment/flask-deployment
+...
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-service
+  namespace: default
+  labels:
+    name: flask-service
+spec:
+  selector:
+    app: python-flask
+  ports:
+    - port: 80
+      targetPort: 5500
+      protocol: TCP
+      name: http
+      nodePort: 30000 #Default port range 30000-32767. If not specified, assigned automatically
+      name: flaskport
+  type: LoadBalancer
+  ipFamilies: 
+    - "IPv4" #Family type - Specify IPv4 or IPv6.
+  ipFamilyPolicy: "SingleStack" #Singlestack means Single IP family. Dualstack means we can allocate both IPv4 or IPv6.
+  clusterIP: 10.100.100.100 #None means headless service (used for direct endpoint connections and no proxy reuired), "" to assign automatically
+  loadBalancerIP: 3.108.2.108
+  externalTrafficPolicy: "Cluster" #Default is Cluster - have good overall load-spreading. Local - potentially imbalanced traffic spreading
+  internalTrafficPolicy: "Cluster" #Default is Cluster - routes internal traffic to a Service to all endpoints. Local routes traffic to node-local endpoints only, traffic is dropped if no node-local endpoints are ready.
+  allocateLoadBalancerNodePorts: false #True to assign node port if nodePort value is not given
+...

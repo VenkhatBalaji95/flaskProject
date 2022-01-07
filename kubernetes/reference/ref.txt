@@ -35,14 +35,14 @@ Ref - https://kubernetes.io/docs/setup/production-environment/container-runtimes
 
 ------------------------------------------------------------------------------------------------
 
-Install kubeadm - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+Why to deploy Pod network to the cluster ?
 
-------------------------------------------------------------------------------------------------
+You must deploy a Container Network Interface (CNI) based Pod network add-on so that your Pods can communicate with each other. Cluster DNS (CoreDNS) will not start up before a network is installed.
 
-To configure the kubelet cgroup driver - https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
+Refer: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network
 
-------------------------------------------------------------------------------------------------
+There are so many add-ons that implement the Kubernetes networking model. But, Flannel is a very simple overlay network that satisfies the Kubernetes requirements.
 
-To configure the container runtime cgroup driver - https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+Refer: https://kubernetes.io/docs/concepts/cluster-administration/networking/#flannel
 
 ------------------------------------------------------------------------------------------------

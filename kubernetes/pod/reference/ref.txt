@@ -1,5 +1,0 @@
-About Pod: https://kubernetes.io/docs/concepts/workloads/pods/
-Pod config file: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
-
-About Service: https://kubernetes.io/docs/concepts/services-networking/service/
-Service config file: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
