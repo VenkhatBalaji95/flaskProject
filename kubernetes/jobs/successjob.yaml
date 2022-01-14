@@ -1,0 +1,34 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: successjob
+  namespace: default
+  labels:
+    code: python3
+  annotations:
+    name: successjob
+spec:
+  template:
+    metadata:
+      name: job-pod
+      namespace: default
+      labels:
+        code: "python-success-job"
+    spec:
+      containers:
+        - name: success-job-container
+          image: "venkhat/k8jobs:1"
+          imagePullPolicy: Always
+          #args:
+          #  - "-n Balaji"
+      imagePullSecrets: 
+        - name: venkhatcred
+      restartPolicy: "Never"
+      shareProcessNamespace: true
+  parallelism: 2 #Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism)
+  completions: 1 #Specifies the desired number of successfully finished pods the job should be run with.
+  completionMode: "NonIndexed" #"NonIndexed" means that the Job is considered complete when there have been ".spec.completions" successfully completed Pods and it's the default one. "Indexed" means that the Pods of a Job get an associated completion index from 0 to (.spec.completions - 1) and the Job is considered complete when there is one successfully completed Pod for each index.
+  backoffLimit: 0 #Specifies the number of retries before marking this job failed. If 0, then no retry. Default is 6.
+  ttlSecondsAfterFinished: 1000 # when the Job finishes, it will be automatically deleted after the mentioned seconds.
+  suspend: false #Suspend specifies whether the Job controller should create Pods or not.

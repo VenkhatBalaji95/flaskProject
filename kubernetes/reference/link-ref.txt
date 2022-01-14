@@ -31,3 +31,9 @@ About Deployment - https://kubernetes.io/docs/concepts/workloads/controllers/dep
 Deployment config file - https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
 
 ------------------------------------------------------------------------------------------------
+
+About Job - https://kubernetes.io/docs/concepts/workloads/controllers/job/
+
+Job config file - https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/job-v1/
+
+------------------------------------------------------------------------------------------------
