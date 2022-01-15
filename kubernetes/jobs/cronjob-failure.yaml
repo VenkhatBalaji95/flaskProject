@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: failurecronjob
+  namespace: default
+  labels:
+    code: python3
+  annotations:
+    name: failurecronjob
+spec:
+  jobTemplate:
+    metadata:
+      name: childcronjob-f
+      namespace: default
+      labels:
+        child: cronjob
+    spec:
+      template:
+        metadata:
+          namespace: default
+          labels:
+            code: "python-failure-job"
+        spec:
+          containers:
+            - name: failure-job-container
+              image: "venkhat/k8jobs:1"
+              imagePullPolicy: Always
+              args:
+                - "-n Balaji"
+          imagePullSecrets: 
+            - name: venkhatcred
+          restartPolicy: "Never"
+          shareProcessNamespace: true
+      parallelism: 3
+      completions: 4
+      completionMode: "NonIndexed"
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 1000
+      suspend: false
+  schedule: "*/2 * * * *" #Cron expression - https://crontab.guru/
+  concurrencyPolicy: "Forbid" #Specifies how to treat concurrent executions of a Job. "Allow" (default): allows CronJobs to run concurrently; "Forbid": forbids concurrent runs, skipping next run if previous run hasn't finished yet; "Replace": cancels currently running job and replaces it with a new one
+  startingDeadlineSeconds: 60 #Optional deadline in seconds for starting the job if it misses scheduled time for any reason. Missed jobs executions will be counted as failed ones.
+  suspend: false #This flag tells the controller to suspend subsequent executions, it does not apply to already started executions. Defaults to false.
+  successfulJobsHistoryLimit: 5 #The number of successful finished jobs to retain. Defaults to 3.
+  failedJobsHistoryLimit: 3 #The number of failed finished jobs to retain. Defaults to 1.
