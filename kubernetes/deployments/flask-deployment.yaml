@@ -26,6 +26,25 @@ spec:
           ports:
             - containerPort: 5500
               protocol: TCP
+          readinessProbe: # readinessProbe -- Indicates whether the container is ready to respond to requests. If the readiness probe fails, the endpoints controller removes the Pod's IP address from the endpoints of all Services that match the Pod. livenessProbe -- Indicates whether the container is running. If the liveness probe fails, the kubelet kills the container, and the container is subjected to its restart policy. startupProbe -- Indicates whether the application within the container is started. All other probes are disabled if a startup probe is provided, until it succeeds. If the startup probe fails, the kubelet kills the container, and the container is subjected to its restart policy.
+            httpGet: # HTTPGet specifies the http request to perform
+              port: 5500 # port to access on the container
+              path: /login #Path to access on the HTTP server.
+              scheme: "HTTP" #Scheme to use for connecting to the host. Defaults to HTTP.
+            periodSeconds: 2 #How often (in seconds) to perform the probe. Default to 10 seconds. 
+            timeoutSeconds: 2 #Number of seconds after which the probe times out. Defaults to 1 second
+            failureThreshold: 2 #Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.
+            successThreshold: 2 #Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup.
+          livenessProbe: # livenessProbe -- Indicates whether the container is running. If the liveness probe fails, the kubelet kills the container, and the container is subjected to its restart policy. 
+            httpGet:
+              port: 5500 
+              path: /login
+              scheme: "HTTP"
+            initialDelaySeconds: 5 # Number of seconds after the container has started before liveness probes are initiated.
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 2
+            successThreshold: 1 # Must be 1 for liveness and startup
       imagePullSecrets: 
         - name: venkhatcred
       restartPolicy: "Always"
