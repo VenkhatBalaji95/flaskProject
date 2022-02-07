@@ -1,4 +1,33 @@
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-service
+  namespace: default
+  labels:
+    name: flask-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb #By default ELB creates classic loadbalancer. Ingress will create ALB
+spec:
+  selector:
+    app: python-flask
+  ports:
+    - port: 80
+      targetPort: 5500
+      protocol: TCP
+      name: http
+      nodePort: 30000 #Default port range 30000-32767. If not specified, assigned automatically
+      name: flaskport
+  type: LoadBalancer
+  ipFamilies: 
+    - "IPv4" #Family type - Specify IPv4 or IPv6.
+  ipFamilyPolicy: "SingleStack" #Singlestack means Single IP family. Dualstack means we can allocate both IPv4 or IPv6.
+  clusterIP: 10.100.100.100 #None means headless service (used for direct endpoint connections and no proxy reuired), "" to assign automatically
+  externalTrafficPolicy: "Cluster" #Default is Cluster - have good overall load-spreading. Local - potentially imbalanced traffic spreading
+  internalTrafficPolicy: "Cluster" #Default is Cluster - routes internal traffic to a Service to all endpoints. Local routes traffic to node-local endpoints only, traffic is dropped if no node-local endpoints are ready.
+  allocateLoadBalancerNodePorts: false #True to assign node port if nodePort value is not given
+...
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -58,32 +87,4 @@ spec:
   revisionHistoryLimit: 8 #The number of old ReplicaSets to retain to allow rollback. Defaults to 10. To find the revision - kubectl rollout history deployment/flask-deployment
   progressDeadlineSeconds: 600 #The maximum time in seconds for a deployment to make progress before it is considered to be failed. The deployment controller will continue to process failed deployments and a condition with a "ProgressDeadlineExceeded" reason will be surfaced in the deployment status.
   paused: false #Indicates deployment is paused. To pause manually - kubectl rollout pause deployment/flask-deployment. To resume manually - kubectl rollout resume deployment/flask-deployment
-...
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: flask-service
-  namespace: default
-  labels:
-    name: flask-service
-spec:
-  selector:
-    app: python-flask
-  ports:
-    - port: 80
-      targetPort: 5500
-      protocol: TCP
-      name: http
-      nodePort: 30000 #Default port range 30000-32767. If not specified, assigned automatically
-      name: flaskport
-  type: LoadBalancer
-  ipFamilies: 
-    - "IPv4" #Family type - Specify IPv4 or IPv6.
-  ipFamilyPolicy: "SingleStack" #Singlestack means Single IP family. Dualstack means we can allocate both IPv4 or IPv6.
-  clusterIP: 10.100.100.100 #None means headless service (used for direct endpoint connections and no proxy reuired), "" to assign automatically
-  loadBalancerIP: 3.108.2.108
-  externalTrafficPolicy: "Cluster" #Default is Cluster - have good overall load-spreading. Local - potentially imbalanced traffic spreading
-  internalTrafficPolicy: "Cluster" #Default is Cluster - routes internal traffic to a Service to all endpoints. Local routes traffic to node-local endpoints only, traffic is dropped if no node-local endpoints are ready.
-  allocateLoadBalancerNodePorts: false #True to assign node port if nodePort value is not given
 ...
