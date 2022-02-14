@@ -26,6 +26,8 @@ About Service - https://kubernetes.io/docs/concepts/services-networking/service/
 
 Service config file - https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
 
+About attach label to the node - https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#step-one-attach-label-to-the-node
+
 ------------------------------------------------------------------------------------------------
 
 About Deployment - https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
@@ -43,5 +45,13 @@ Job config file - https://kubernetes.io/docs/reference/kubernetes-api/workload-r
 About cronjob - https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
 
 Cronjob config file - https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/cron-job-v1/
+
+------------------------------------------------------------------------------------------------
+
+About Limit Ranges - https://kubernetes.io/docs/concepts/policy/limit-range/
+
+About Resource Quotas - https://kubernetes.io/docs/concepts/policy/resource-quotas/
+
+About Resource Management for Pods - https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 
 ------------------------------------------------------------------------------------------------

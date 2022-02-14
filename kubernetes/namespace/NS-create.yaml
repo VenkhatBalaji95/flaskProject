@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flask-ns
+  labels:
+    code: python
+    name: flask-ns
+...
+---
+#Refer https://kubernetes.io/docs/concepts/policy/resource-quotas/
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: flask-resource
+  namespace: flask-ns
+  labels:
+    name: flask-resource
+spec:
+  hard:
+    cpu: 12 #Same as requests.cpu (Across all pods in a non-terminal state, the sum of CPU requests cannot exceed this value.)
+    memory: 12Gi #Same as requests.memory (Across all pods in a non-terminal state, the sum of memory requests cannot exceed this value.)
+    pods: 30 #The total number of Pods in a non-terminal state that can exist in the namespace. A pod is in a terminal state if .status.phase in (Failed, Succeeded) is true
+    persistentvolumeclaims: "1" #The total number of PersistentVolumeClaims that can exist in the namespace.
+    services.loadbalancers: "2" #The total number of Services of type LoadBalancer that can exist in the namespace.
+    services.nodeports: "2" #The total number of Services of type NodePort that can exist in the namespace.
+...
+---
+#Refer https://kubernetes.io/docs/concepts/policy/limit-range/
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: flask-limit
+  namespace: flask-ns
+  labels:
+    name: flask-limit
+spec:
+  limits:
+    - default: #Default limit for Compute Resource (CPU and RAM Memory)
+        memory: 128Mi
+        cpu: 1
+      defaultRequest: #Default Request for the same
+        memory: 111Mi
+        cpu: 0.5
+      max: #Maximum request for the same
+        memory: 2Gi
+        cpu: 2
+      min: #Minimum request for the same
+        memory: 100Mi
+        cpu: 200m
+      type: Container #It should be always Container
+...

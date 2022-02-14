@@ -46,3 +46,16 @@ There are so many add-ons that implement the Kubernetes networking model. But, F
 Refer: https://kubernetes.io/docs/concepts/cluster-administration/networking/#flannel
 
 ------------------------------------------------------------------------------------------------
+
+What’s a Proxy Server?
+A proxy server acts as a gateway between you and the internet. It’s an intermediary server separating end users from the websites they browse. Proxy servers provide varying levels of functionality, security, and privacy depending on your use case, needs, or company policy.
+
+If you’re using a proxy server, internet traffic flows through the proxy server on its way to the address you requested. The request then comes back through that same proxy server (there are exceptions to this rule), and then the proxy server forwards the data received from the website to you.
+
+------------------------------------------------------------------------------------------------
+
+What is NAT ?
+
+Network Address Translation (NAT) protects IP addresses by enabling private IP networks using unregistered IP addresses to go online. Before NAT forwards packets between the networks it connects, it translates the private internal network addresses into legal, globally unique addresses.
+
+------------------------------------------------------------------------------------------------
