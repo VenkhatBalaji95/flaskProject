@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flask-ingress
+  namespace: flask-ns
+  labels:
+    name: flask-ns-ingress
+  annotations:
+    #For a list of all available annotations supported by the AWS Load Balancer Controller, see - https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/ingress/annotations/
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/load-balancer-name: flask-ns-ingress-alb
+    alb.ingress.kubernetes.io/target-type: ip #Instance value for Nodeport or Loadbalancer service types.
+    alb.ingress.kubernetes.io/tags: Name=flask-ns-ingress, Namespace=flask-ns, Application=pythonFlask
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/success-codes: 200-400
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    #alb.ingress.kubernetes.io/security-groups
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=550,access_logs.s3.enabled=true,access_logs.s3.bucket=elb-eks-flask,access_logs.s3.prefix=flask
+spec:
+  defaultBackend:
+    service:
+      name: game-2048-service
+      port:
+        number: 80
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: flask-service
+                port:
+                  number: 80
+            pathType: Prefix
+            path: /login
+          - backend:
+              service:
+                name: flask-service
+                port:
+                  number: 80
+            pathType: Prefix
+            path: /logout
+          - backend:
+              service:
+                name: flask-service
+                port:
+                  number: 80
+            pathType: Prefix
+            path: /signup
+          - backend:
+              service:
+                name: flask-service
+                port:
+                  number: 80
+            pathType: Prefix
+            path: /host

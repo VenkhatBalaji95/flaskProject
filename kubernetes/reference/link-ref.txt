@@ -55,3 +55,21 @@ About Resource Quotas - https://kubernetes.io/docs/concepts/policy/resource-quot
 About Resource Management for Pods - https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 
 ------------------------------------------------------------------------------------------------
+
+Steps to Install EFS CSI driver on EKS - https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html
+
+------------------------------------------------------------------------------------------------
+
+About Ingress - https://kubernetes.io/docs/concepts/services-networking/ingress/
+
+About Ingress config - https://kubernetes.io/docs/reference/kubernetes-api/service-resources/ingress-v1/
+
+Application load balancing on Amazon EKS - https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html
+
+About ALB on EKS Annotation - https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/ingress/annotations/
+
+Installing the AWS Load Balancer Controller add-on - https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html
+
+Requirement to enable S3 access for ALB - https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html#access-logging-bucket-permissions
+
+------------------------------------------------------------------------------------------------
