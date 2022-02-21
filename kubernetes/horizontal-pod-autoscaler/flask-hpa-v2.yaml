@@ -1,0 +1,57 @@
+#Refer: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/
+#https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: flask-hpa
+  namespace: flask-ns
+spec:
+  maxReplicas: 10 #maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas.
+  scaleTargetRef: #scaleTargetRef points to the target resource to scale, and is used to the pods for which metrics should be collected, as well as to actually change the replica count.
+    kind: Deployment
+    name: flask-deployment
+    apiVersion: apps/v1
+  minReplicas: 1 #minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down. It defaults to 1 pod.
+  behavior: #behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used.
+    scaleDown: #scaleDown is scaling policy for scaling Down. If not set, the default value is to allow to scale down to minReplicas pods, with a 300 second stabilization window
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 15
+      selectPolicy: Max #selectPolicy is used to specify which policy should be used. If not set, the default value Max is used. 'Disabled' value turns off scaling the given direction
+      stabilizationWindowSeconds: 300 #StabilizationWindowSeconds is the number of seconds for which past recommendations should be considered while scaling up or scaling down. If not set, use the default values: - For scale up: 0 (i.e. no stabilization is done). - For scale down: 300 (i.e. the stabilization window is 300 seconds long)
+    scaleUp: #is scaling policy for scaling Up. If not set, the default value is the higher of: (i) increase no more than 4 pods per 60 seconds (ii) double the number of pods per 60 seconds No stabilization is used.
+      policies: #In case of multiple policies, by default the policy which allows the highest amount of change is selected
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+      stabilizationWindowSeconds: 60
+  metrics: #metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used)
+    - type: Resource
+      resource:
+        name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 50
+    - type: Pods
+      pods:
+        metric:
+          name: packets-per-second
+        target:
+          type: AverageValue
+          averageValue: 1k
+    - type: Object
+      object:
+        metric:
+          name: requests-per-second
+        describedObject:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          name: main-route
+        target:
+          type: Value
+          value: 10k

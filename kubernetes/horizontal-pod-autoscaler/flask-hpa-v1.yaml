@@ -1,0 +1,15 @@
+#Refer: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v1/
+#https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: flask-hpa
+  namespace: flask-ns
+spec:
+  maxReplicas: 10
+  scaleTargetRef:
+    kind: Deployment
+    name: flask-deployment
+    apiVersion: apps/v1
+  minReplicas: 1
+  targetCPUUtilizationPercentage: 50
