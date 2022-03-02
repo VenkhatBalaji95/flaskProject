@@ -21,3 +21,5 @@ helm status flask-release -n flask-ns
 
 #https://helm.sh/docs/helm/helm_uninstall/
 helm uninstall flask-release -n flask-ns --wait
+
+#About helm - https://helm.sh/docs/

@@ -83,3 +83,7 @@ About HPA V1 config: https://kubernetes.io/docs/reference/kubernetes-api/workloa
 About HPA V2 config: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/
 
 ------------------------------------------------------------------------------------------------
+
+About helm - https://helm.sh/docs/
+
+------------------------------------------------------------------------------------------------
