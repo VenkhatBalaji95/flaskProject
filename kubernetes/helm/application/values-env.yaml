@@ -1,0 +1,5 @@
+env:
+  imageName: "venkhat/flaskproject"
+  imageVersion: "v2"
+  replicas: 2
+  #gameReplicas: 2

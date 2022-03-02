@@ -1,0 +1,12 @@
+app:
+  name: "flask"
+  ns: "flask-ns"
+  gameServiceName: "game-2048-service"
+  servicePort: 85
+  serviceName: "flask-service"
+  containerPort: 5500
+  revision: "8"
+  clusterIp: 10.100.100.100
+  gameClusterIp: 10.100.100.101
+  gameName: "game-2048"
+  gameImage: "public.ecr.aws/l6m2t8p7/docker-2048"

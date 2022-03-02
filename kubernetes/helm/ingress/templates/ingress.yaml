@@ -1,0 +1,55 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ required "ingress name" .Values.app.name | lower }}-ingress
+  namespace: {{ required "Namespace is required" .Values.app.ns | lower | quote }}
+  labels:
+    namespace: {{ required "ingress name" .Values.app.name | lower }}-ingress
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/load-balancer-name: {{ required "Namespace is required" .Values.app.ns | lower }}-ingress-alb
+    alb.ingress.kubernetes.io/target-type: ip #Instance value for Nodeport or Loadbalancer service types.
+    alb.ingress.kubernetes.io/tags: Name=flask-ns-ingress, Namespace=flask-ns, Application=pythonFlask
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/success-codes: 200-400
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    #alb.ingress.kubernetes.io/security-groups
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=550,access_logs.s3.enabled=true,access_logs.s3.bucket=elb-eks-flask,access_logs.s3.prefix=flask
+spec:
+  defaultBackend:
+    service:
+      name: {{ required "Game service name is required" .Values.app.gameServiceName | lower | quote }}
+      port:
+        number: {{ default 80 .Values.app.servicePort }}
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: {{ required "service name is required" .Values.app.serviceName | lower | quote }}
+                port:
+                  number: {{ default 80 .Values.app.servicePort }}
+            pathType: Prefix
+            path: /login
+          - backend:
+              service:
+                name: {{ required "service name is required" .Values.app.serviceName | lower | quote }}
+                port:
+                  number: {{ default 80 .Values.app.servicePort }}
+            pathType: Prefix
+            path: /logout
+          - backend:
+              service:
+                name: {{ required "service name is required" .Values.app.serviceName | lower | quote }}
+                port:
+                  number: {{ default 80 .Values.app.servicePort }}
+            pathType: Prefix
+            path: /signup
+          - backend:
+              service:
+                name: {{ required "service name is required" .Values.app.serviceName | lower | quote }}
+                port:
+                  number: {{ default 80 .Values.app.servicePort }}
+            pathType: Prefix
+            path: /host

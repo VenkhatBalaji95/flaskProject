@@ -1,0 +1,23 @@
+#https://helm.sh/docs/helm/helm_lint/
+helm lint . --values values-env.yaml
+
+#https://helm.sh/docs/helm/helm_package/ this version will overwrite the version in chart.yaml
+helm package . --version 0.0.1-1
+
+#https://helm.sh/docs/helm/helm_repo_list/
+helm repo list
+
+#https://helm.sh/docs/helm/helm_repo_update/
+helm repo update
+
+#https://helm.sh/docs/helm/helm_list/
+helm list --all --all-namespaces
+
+#https://helm.sh/docs/helm/helm_upgrade/
+helm upgrade flask-release . --install --values values-env.yaml --namespace flask-ns --force --wait
+
+#https://helm.sh/docs/helm/helm_status/
+helm status flask-release -n flask-ns
+
+#https://helm.sh/docs/helm/helm_uninstall/
+helm uninstall flask-release -n flask-ns --wait

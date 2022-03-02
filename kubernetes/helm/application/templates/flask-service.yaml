@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ required "service name" .Values.app.serviceName | lower | quote }}
+  namespace: {{ required "Namespace is required" .Values.app.ns | lower | quote }}
+  labels:
+    name: {{ required "service name" .Values.app.serviceName | lower | quote }}
+spec:
+  selector:
+    app: python-flask
+  ports:
+    - port: {{ default 80 .Values.app.servicePort }}
+      targetPort: {{ default 5500 .Values.app.containerPort }}
+      protocol: TCP
+  type: ClusterIP
+  ipFamilies: 
+    - "IPv4"
+  ipFamilyPolicy: "SingleStack"
+  clusterIP: {{ .Values.app.clusterIp }}
+  internalTrafficPolicy: "Cluster"

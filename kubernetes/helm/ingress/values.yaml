@@ -1,0 +1,6 @@
+app:
+  name: flask
+  ns: "flask-ns"
+  gameServiceName: "game-2048-service"
+  servicePort: 85
+  serviceName: "flask-service"

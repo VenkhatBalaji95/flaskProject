@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ required "Namespace is required" .Values.app.ns | lower | quote }}
+  name: {{ required "Deployment name" .Values.app.gameName | lower }}-deployment
+  labels:
+    name: {{ required "Deployment name" .Values.app.gameName | lower }}-deployment
+  annotations:
+    name: {{ required "Deployment name" .Values.app.gameName | lower }}-deployment
+spec:
+  selector:
+    matchLabels:
+      app: game-2048-app
+  #https://helm.sh/docs/chart_best_practices/values/
+  replicas: {{ if .Values.env.gameReplicas }}
+            {{ default 1 .Values.env.gameReplicas }}
+            {{ end }}
+  template:
+    metadata:
+      labels:
+        app: game-2048-app
+    spec:
+      containers:
+      - image: {{ .Values.app.gameImage | lower }}:latest
+        imagePullPolicy: Always
+        name: game-2048-app
+        ports:
+          - containerPort: 80
+            protocol: TCP
+        resources:
+            limits:
+              memory: 500Mi
+              cpu: 500m
+            requests:
+              memory: 150Mi
+              cpu: 250m
+      restartPolicy: "Always"
+  minReadySeconds: 3
+  strategy:
+    type: "RollingUpdate"
+    rollingUpdate:
+      maxSurge: "20%"
+      maxUnavailable: "20%"
+  revisionHistoryLimit: {{ int $.Values.app.revision }}
+  progressDeadlineSeconds: 600
+  paused: false

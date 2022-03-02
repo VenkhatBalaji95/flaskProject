@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ required "Deployment name" .Values.app.name | lower }}-deployment
+  namespace: {{ required "Namespace is required" .Values.app.ns | lower | quote }}
+  labels:
+    name: {{ required "Deployment name" .Values.app.name | lower }}-deployment
+  annotations:
+    name: {{ required "Deployment name" .Values.app.name | lower }}-deployment
+spec:
+  selector:
+    matchLabels:
+      app: python-flask
+  template:
+    metadata:
+      labels:
+        app: python-flask
+    spec:
+      containers:
+        - name: flask-app
+          image: {{ required "Image name" .Values.env.imageName | lower }}:{{ required "Image version" .Values.env.imageVersion | lower }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ default 5500 .Values.app.containerPort }}
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              port: {{ default 5500 .Values.app.containerPort }}
+              path: /login
+              scheme: "HTTP"
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 2
+            successThreshold: 2
+          livenessProbe:
+            httpGet:
+              port: {{ default 5500 .Values.app.containerPort }}
+              path: /login
+              scheme: "HTTP"
+            initialDelaySeconds: 5
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 2
+            successThreshold: 1
+          resources:
+            limits:
+              memory: 500Mi
+              cpu: 500m
+            requests:
+              memory: 150Mi
+              cpu: 250m
+      imagePullSecrets: 
+        - name: venkhatcred
+      restartPolicy: "Always"
+  #https://helm.sh/docs/chart_best_practices/values/
+  replicas: {{ if .Values.env.replicas }}
+            {{ default 1 .Values.env.replicas }}
+            {{ end }}
+  minReadySeconds: 3 
+  strategy:
+    type: "RollingUpdate" 
+    rollingUpdate:
+      maxSurge: "20%" 
+      maxUnavailable: "20%" 
+  revisionHistoryLimit: {{ int $.Values.app.revision }}
+  progressDeadlineSeconds: 600 
+  paused: false 

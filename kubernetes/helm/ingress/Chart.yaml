@@ -1,0 +1,7 @@
+#Helm chart best pracitce: https://helm.sh/docs/chart_best_practices/conventions/
+apiVersion: "v2"
+name: ingress-deployment
+version: 0.0.1
+description: "Helm chart to deploy ingress"
+type: application
+appVersion: 1.2.3

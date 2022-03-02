@@ -1,0 +1,7 @@
+#Helm chart best pracitce: https://helm.sh/docs/chart_best_practices/conventions/
+apiVersion: "v2"
+name: app-deployment
+version: 0.0.1
+description: "Helm chart to deploy flask and 2048 game"
+type: application
+appVersion: 1.2.3
