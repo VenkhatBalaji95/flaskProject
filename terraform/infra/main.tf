@@ -52,6 +52,13 @@ resource "aws_route_table" "privateRouteTable" {
 	}
 }
 
+resource "aws_route" "addPrivateRoute" {
+	depends_on = [aws_route_table.privateRouteTable, aws_instance.natInstance]
+	route_table_id = aws_route_table.privateRouteTable.id
+	destination_cidr_block = "0.0.0.0/0"
+	instance_id = aws_instance.natInstance.id
+}
+
 resource "aws_subnet" "createPublicSubnet1" {
 	depends_on = [aws_vpc.createVpc]
 	vpc_id = aws_vpc.createVpc[0].id
