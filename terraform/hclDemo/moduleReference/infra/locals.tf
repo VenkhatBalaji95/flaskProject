@@ -1,0 +1,3 @@
+locals {
+	iamUser = ["venkhat","balaji"]
+}
